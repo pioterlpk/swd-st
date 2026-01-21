@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="pl">
+<head>
+<meta charset="UTF-8">
+<title>SWD-ST | Stanowisko Kierowania PSP</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+:root {
+  --bg: #0f172a;
+  --panel: #1e293b;
+  --panel-light: #334155;
+  --accent: #ef4444;
+  --green: #22c55e;
+  --yellow: #eab308;
+  --text: #e5e7eb;
+  --muted: #94a3b8;
+}
+
+* {
+  box-sizing: border-box;
+  font-family: "Segoe UI", Arial, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+}
+
+/* ===== TOP BAR ===== */
+header {
+  background: #020617;
+  padding: 10px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 2px solid var(--accent);
+}
+
+header h1 {
+  font-size: 18px;
+  margin: 0;
+  letter-spacing: 1px;
+}
+
+header span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+/* ===== MAIN GRID ===== */
+.main {
+  display: grid;
+  grid-template-columns: 320px 1fr 360px;
+  height: calc(100vh - 54px);
+}
+
+/* ===== LEFT PANEL ===== */
+.panel {
+  background: var(--panel);
+  border-right: 1px solid #020617;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.panel h2 {
+  font-size: 14px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+/* ===== ZGŁOSZENIA ===== */
+.call {
+  background: var(--panel-light);
+  padding: 10px;
+  margin-bottom: 10px;
+  border-left: 4px solid var(--accent);
+}
+
+.call strong {
+  display: block;
+}
+
+.call small {
+  color: var(--muted);
+}
+
+/* ===== MAPA ===== */
+.map {
+  background: radial-gradient(#1e293b 1px, transparent 1px);
+  background-size: 20px 20px;
+  position: relative;
+}
+
+.map::before {
+  content: "MAPA OPERACYJNA (SWD-ST)";
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.marker {
+  position: absolute;
+  width: 14px;
+  height: 14px;
+  background: var(--accent);
+  border-radius: 50%;
+  top: 40%;
+  left: 55%;
+  box-shadow: 0 0 10px var(--accent);
+}
+
+/* ===== RIGHT PANEL ===== */
+.unit {
+  background: var(--panel-light);
+  padding: 8px;
+  margin-bottom: 8px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.status {
+  font-size: 11px;
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.green { background: var(--green); }
+.yellow { background: var(--yellow); color: #000; }
+.red { background: var(--accent); }
+
+/* ===== FOOTER ===== */
+footer {
+  position: absolute;
+  bottom: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 11px;
+  color: var(--muted);
+}
+</style>
+</head>
+
+<body>
+
+<header>
+  <h1>SWD-ST | Stanowisko Kierowania PSP</h1>
+  <span>Status systemu: ONLINE</span>
+</header>
+
+<div class="main">
+
+  <!-- LEWA KOLUMNA -->
+  <div class="panel">
+    <h2>Zgłoszenia</h2>
+
+    <div class="call">
+      <strong>Pożar budynku</strong>
+      <small>Miasto RP, ul. Leśna 12</small><br>
+      <small>Godzina: 14:32</small>
+    </div>
+
+    <div class="call">
+      <strong>Wypadek drogowy</strong>
+      <small>DK7 km 122</small><br>
+      <small>Godzina: 13:58</small>
+    </div>
+  </div>
+
+  <!-- MAPA -->
+  <div class="map">
+    <div class="marker" title="Zdarzenie"></div>
+  </div>
+
+  <!-- PRAWA KOLUMNA -->
+  <div class="panel">
+    <h2>Siły i środki</h2>
+
+    <div class="unit">
+      <span>JRG 1 – GBA</span>
+      <span class="status red">NA MIEJSCU</span>
+    </div>
+
+    <div class="unit">
+      <span>JRG 1 – GCBA</span>
+      <span class="status yellow">W DRODZE</span>
+    </div>
+
+    <div class="unit">
+      <span>OSP Miasto RP</span>
+      <span class="status green">WOLNY</span>
+    </div>
+
+  </div>
+</div>
+
+<footer>
+  System Wspomagania Dowodzenia – wersja RP / symulacja
+</footer>
+
+</body>
+</html>
