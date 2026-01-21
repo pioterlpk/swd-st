@@ -2,206 +2,179 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>SWD-ST | Stanowisko Kierowania PSP</title>
+<title>SWD-ST Pilawa | Funkcjonalne RP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-:root {
-  --bg: #0f172a;
-  --panel: #1e293b;
-  --panel-light: #334155;
-  --accent: #ef4444;
-  --green: #22c55e;
-  --yellow: #eab308;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-}
-
-* {
-  box-sizing: border-box;
-  font-family: "Segoe UI", Arial, sans-serif;
-}
-
-body {
-  margin: 0;
-  background: var(--bg);
-  color: var(--text);
-}
-
-/* ===== TOP BAR ===== */
-header {
-  background: #020617;
-  padding: 10px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  border-bottom: 2px solid var(--accent);
-}
-
-header h1 {
-  font-size: 18px;
-  margin: 0;
-  letter-spacing: 1px;
-}
-
-header span {
-  color: var(--muted);
-  font-size: 13px;
-}
-
-/* ===== MAIN GRID ===== */
-.main {
-  display: grid;
-  grid-template-columns: 320px 1fr 360px;
-  height: calc(100vh - 54px);
-}
-
-/* ===== LEFT PANEL ===== */
-.panel {
-  background: var(--panel);
-  border-right: 1px solid #020617;
-  padding: 12px;
+body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
+#map { width: 100%; height: 100%; }
+.sidebar {
+  position: absolute; top: 10px; left: 10px;
+  width: 320px;
+  background: #f9f9f9;
+  padding: 10px;
+  border-radius: 6px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.25);
+  z-index: 1000;
+  max-height: 95%;
   overflow-y: auto;
 }
-
-.panel h2 {
-  font-size: 14px;
-  margin-bottom: 10px;
-  text-transform: uppercase;
-  color: var(--muted);
-}
-
-/* ===== ZGŁOSZENIA ===== */
-.call {
-  background: var(--panel-light);
-  padding: 10px;
-  margin-bottom: 10px;
-  border-left: 4px solid var(--accent);
-}
-
-.call strong {
-  display: block;
-}
-
-.call small {
-  color: var(--muted);
-}
-
-/* ===== MAPA ===== */
-.map {
-  background: radial-gradient(#1e293b 1px, transparent 1px);
-  background-size: 20px 20px;
-  position: relative;
-}
-
-.map::before {
-  content: "MAPA OPERACYJNA (SWD-ST)";
-  position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.marker {
-  position: absolute;
-  width: 14px;
-  height: 14px;
-  background: var(--accent);
-  border-radius: 50%;
-  top: 40%;
-  left: 55%;
-  box-shadow: 0 0 10px var(--accent);
-}
-
-/* ===== RIGHT PANEL ===== */
-.unit {
-  background: var(--panel-light);
-  padding: 8px;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.status {
-  font-size: 11px;
-  padding: 2px 6px;
+h2 { margin: 0 0 8px; font-size: 16px; }
+input, select, button, textarea {
+  width: 100%;
+  margin: 4px 0;
+  padding: 6px;
+  border: 1px solid #aaa;
   border-radius: 4px;
 }
-
-.green { background: var(--green); }
-.yellow { background: var(--yellow); color: #000; }
-.red { background: var(--accent); }
-
-/* ===== FOOTER ===== */
-footer {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  font-size: 11px;
-  color: var(--muted);
+.unit-list div {
+  padding: 6px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
 }
+.unit-list div:hover { background: #e0e0e0; }
+.call-list div {
+  padding: 6px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+}
+.call-list div:hover { background: #d0f0ff; }
+.status-select { margin-top: 4px; }
 </style>
 </head>
-
 <body>
 
-<header>
-  <h1>SWD-ST | Stanowisko Kierowania PSP</h1>
-  <span>Status systemu: ONLINE</span>
-</header>
+<div id="map"></div>
 
-<div class="main">
+<div class="sidebar">
+  <h2>Dodaj zgłoszenie</h2>
+  <textarea id="callText" placeholder="Opis zdarzenia..." rows="3"></textarea>
+  <input id="callAddress" placeholder="Adres lub miejscowość"/>
+  <button onclick="addCall()">Dodaj zgłoszenie</button>
+  
+  <h2>Zgłoszenia</h2>
+  <div id="callsContainer" class="call-list"></div>
 
-  <!-- LEWA KOLUMNA -->
-  <div class="panel">
-    <h2>Zgłoszenia</h2>
-
-    <div class="call">
-      <strong>Pożar budynku</strong>
-      <small>Miasto RP, ul. Leśna 12</small><br>
-      <small>Godzina: 14:32</small>
-    </div>
-
-    <div class="call">
-      <strong>Wypadek drogowy</strong>
-      <small>DK7 km 122</small><br>
-      <small>Godzina: 13:58</small>
-    </div>
-  </div>
-
-  <!-- MAPA -->
-  <div class="map">
-    <div class="marker" title="Zdarzenie"></div>
-  </div>
-
-  <!-- PRAWA KOLUMNA -->
-  <div class="panel">
-    <h2>Siły i środki</h2>
-
-    <div class="unit">
-      <span>JRG 1 – GBA</span>
-      <span class="status red">NA MIEJSCU</span>
-    </div>
-
-    <div class="unit">
-      <span>JRG 1 – GCBA</span>
-      <span class="status yellow">W DRODZE</span>
-    </div>
-
-    <div class="unit">
-      <span>OSP Miasto RP</span>
-      <span class="status green">WOLNY</span>
-    </div>
-
-  </div>
+  <h2>Siły i środki</h2>
+  <div id="unitsContainer" class="unit-list"></div>
 </div>
 
-<footer>
-  System Wspomagania Dowodzenia – wersja RP / symulacja
-</footer>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+<script>
+// ===== MAP INIT =====
+const map = L.map('map').setView([51.892, 21.621], 13); // Lipówki/Pilawa
+
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap contributors' }).addTo(map);
+
+// ===== DATA =====
+let units = JSON.parse(localStorage.getItem('units')) || [
+  { id:1, name:"OSP Pilawa - Średni GBA", lat:51.899, lon:21.621, status:"WOLNY", assignedCall:null },
+  { id:2, name:"OSP Pilawa - Ciężki GCBA", lat:51.899, lon:21.622, status:"WOLNY", assignedCall:null },
+  { id:3, name:"OSP Lipówki - Volvo GBA", lat:51.890, lon:21.613, status:"WOLNY", assignedCall:null },
+  { id:4, name:"OSP Lipówki - STAR 266", lat:51.891, lon:21.615, status:"WOLNY", assignedCall:null },
+  { id:5, name:"OSP Wygoda - Lekki Ford", lat:51.910, lon:21.630, status:"WOLNY", assignedCall:null },
+  { id:6, name:"OSP Puznówka - IVECO", lat:51.880, lon:21.610, status:"WOLNY", assignedCall:null },
+  { id:7, name:"OSP Gocław - MAN", lat:51.870, lon:21.635, status:"WOLNY", assignedCall:null }
+];
+let calls = JSON.parse(localStorage.getItem('calls')) || [];
+
+// ===== MARKER GROUPS =====
+const unitMarkers = L.layerGroup().addTo(map);
+const callMarkers = L.layerGroup().addTo(map);
+
+// ===== FUNCTIONS =====
+function saveData() {
+  localStorage.setItem('units', JSON.stringify(units));
+  localStorage.setItem('calls', JSON.stringify(calls));
+}
+
+function refreshUnits() {
+  const container = document.getElementById('unitsContainer');
+  container.innerHTML = '';
+  units.forEach(u => {
+    const div = document.createElement('div');
+    div.innerHTML = `<b>${u.name}</b> [${u.status}] ${u.assignedCall?'<br>Przydzielony: '+u.assignedCall.text:''}`;
+    div.onclick = ()=>showUnitDialog(u.id);
+    container.appendChild(div);
+  });
+  updateUnitMarkers();
+}
+
+function refreshCalls() {
+  const container = document.getElementById('callsContainer');
+  container.innerHTML = '';
+  calls.forEach(c=>{
+    const div = document.createElement('div');
+    div.innerHTML = `<b>${c.text}</b><br><i>${c.addr}</i>`;
+    div.onclick = ()=>assignUnitDialog(c.id);
+    container.appendChild(div);
+  });
+  updateCallMarkers();
+}
+
+function addCall() {
+  const text = document.getElementById('callText').value.trim();
+  const addr = document.getElementById('callAddress').value.trim();
+  if(!text || !addr){ alert("Wypełnij wszystkie pola!"); return; }
+  const call = { id:Date.now(), text, addr, lat:map.getCenter().lat, lon:map.getCenter().lng };
+  calls.push(call);
+  saveData();
+  refreshCalls();
+  document.getElementById('callText').value = '';
+  document.getElementById('callAddress').value = '';
+}
+
+function showUnitDialog(id) {
+  const u = units.find(x=>x.id===id);
+  let status = prompt("Zmiana statusu (WOLNY / W DRODZE / NA MIEJSCU / DYSPOZYCJA):", u.status);
+  if(status){
+    u.status = status.toUpperCase();
+    saveData();
+    refreshUnits();
+  }
+}
+
+function assignUnitDialog(callId){
+  const call = calls.find(c=>c.id===callId);
+  const unitNames = units.map(u=>u.name).join("\n");
+  const name = prompt("Wpisz nazwę jednostki do przydzielenia:\n"+unitNames);
+  const u = units.find(x=>x.name===name);
+  if(u){
+    u.assignedCall = call;
+    u.status="W DRODZE";
+    saveData();
+    refreshUnits();
+  } else alert("Nie znaleziono jednostki");
+}
+
+// ===== MARKERS =====
+function updateUnitMarkers(){
+  unitMarkers.clearLayers();
+  units.forEach(u=>{
+    const iconUrl = u.status==="NA MIEJSCU"? 'https://cdn-icons-png.flaticon.com/512/1140/1140128.png':
+                    u.status==="W DRODZE"? 'https://cdn-icons-png.flaticon.com/512/1140/1140096.png':
+                    'https://cdn-icons-png.flaticon.com/512/1140/1140116.png';
+    const marker = L.marker([u.lat,u.lon], {icon:L.icon({iconUrl,iconSize:[30,30]})})
+      .addTo(unitMarkers)
+      .bindPopup(`<b>${u.name}</b><br>Status: ${u.status}<br>${u.assignedCall?'<b>Przydzielony do:</b> '+u.assignedCall.text:''}`);
+    marker.on('click', ()=>showUnitDialog(u.id));
+  });
+}
+
+function updateCallMarkers(){
+  callMarkers.clearLayers();
+  calls.forEach(c=>{
+    const marker = L.marker([c.lat,c.lon], {icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2838/2838886.png', iconSize:[32,32]})})
+      .addTo(callMarkers)
+      .bindPopup(`<b>Zgłoszenie:</b><br>${c.text}<br><i>${c.addr}</i>`);
+    marker.on('click', ()=>assignUnitDialog(c.id));
+  });
+}
+
+// ===== INIT =====
+refreshUnits();
+refreshCalls();
+</script>
 
 </body>
 </html>
