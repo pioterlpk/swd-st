@@ -2,44 +2,41 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>SWD-ST Pilawa | Funkcjonalne RP</title>
+<title>SWD-ST Pilawa | Super wygląd</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<!-- Leaflet CSS -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-body, html { margin: 0; padding: 0; height: 100%; font-family: Arial, sans-serif; }
-#map { width: 100%; height: 100%; }
+body, html { margin:0; padding:0; height:100%; font-family:'Segoe UI',sans-serif; background:#f0f2f5; }
+#map { width:100%; height:100%; }
 .sidebar {
-  position: absolute; top: 10px; left: 10px;
-  width: 320px;
-  background: #f9f9f9;
-  padding: 10px;
-  border-radius: 6px;
-  box-shadow: 0 0 12px rgba(0,0,0,0.25);
-  z-index: 1000;
-  max-height: 95%;
-  overflow-y: auto;
+  position:absolute; top:10px; left:10px;
+  width:350px; background:#fff;
+  border-radius:10px; box-shadow:0 0 15px rgba(0,0,0,0.3);
+  z-index:1000; max-height:95%; overflow-y:auto; padding:0;
 }
-h2 { margin: 0 0 8px; font-size: 16px; }
+.tab-header { display:flex; }
+.tab-header div {
+  flex:1; text-align:center; padding:10px; cursor:pointer;
+  border-bottom:2px solid #ccc; font-weight:bold; transition:0.3s;
+}
+.tab-header .active { border-bottom:4px solid #007BFF; color:#007BFF; }
+.tab-content { padding:10px; display:none; }
+.tab-content.active { display:block; }
+h2{margin:0 0 8px;font-size:16px;}
 input, select, button, textarea {
-  width: 100%;
-  margin: 4px 0;
-  padding: 6px;
-  border: 1px solid #aaa;
-  border-radius: 4px;
+  width:100%; margin:4px 0; padding:6px;
+  border:1px solid #888; border-radius:4px;
 }
-.unit-list div {
-  padding: 6px;
-  border-bottom: 1px solid #ddd;
-  cursor: pointer;
+.unit-list div, .call-list div, .history-list div {
+  padding:6px; border-bottom:1px solid #ddd; cursor:pointer; border-radius:4px;
+  margin-bottom:4px; background:#f9f9f9; transition:0.2s;
 }
-.unit-list div:hover { background: #e0e0e0; }
-.call-list div {
-  padding: 6px;
-  border-bottom: 1px solid #ddd;
-  cursor: pointer;
-}
-.call-list div:hover { background: #d0f0ff; }
-.status-select { margin-top: 4px; }
+.unit-list div:hover, .call-list div:hover, .history-list div:hover { background:#e0f0ff; }
+button { background:#007BFF; color:white; border:none; cursor:pointer; transition:0.3s; }
+button:hover { background:#0056b3; }
+.status-label { font-weight:bold; }
 </style>
 </head>
 <body>
@@ -47,133 +44,155 @@ input, select, button, textarea {
 <div id="map"></div>
 
 <div class="sidebar">
-  <h2>Dodaj zgłoszenie</h2>
-  <textarea id="callText" placeholder="Opis zdarzenia..." rows="3"></textarea>
-  <input id="callAddress" placeholder="Adres lub miejscowość"/>
-  <button onclick="addCall()">Dodaj zgłoszenie</button>
-  
-  <h2>Zgłoszenia</h2>
-  <div id="callsContainer" class="call-list"></div>
+  <div class="tab-header">
+    <div class="tab-link active" data-tab="callsTab">Zgłoszenia</div>
+    <div class="tab-link" data-tab="unitsTab">Jednostki</div>
+    <div class="tab-link" data-tab="historyTab">Historia</div>
+  </div>
 
-  <h2>Siły i środki</h2>
-  <div id="unitsContainer" class="unit-list"></div>
+  <div id="callsTab" class="tab-content active">
+    <h2>Dodaj zgłoszenie</h2>
+    <textarea id="callText" placeholder="Opis zdarzenia..." rows="3"></textarea>
+    <input id="callAddress" placeholder="Adres lub miejscowość"/>
+    <button onclick="addCall()">Dodaj zgłoszenie</button>
+    <h2 style="margin-top:10px;">Lista zgłoszeń</h2>
+    <div id="callsContainer" class="call-list"></div>
+  </div>
+
+  <div id="unitsTab" class="tab-content">
+    <h2>Jednostki OSP</h2>
+    <div id="unitsContainer" class="unit-list"></div>
+  </div>
+
+  <div id="historyTab" class="tab-content">
+    <h2>Historia akcji</h2>
+    <div id="historyContainer" class="history-list"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
 // ===== MAP INIT =====
-const map = L.map('map').setView([51.892, 21.621], 13); // Lipówki/Pilawa
-
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{ attribution:'© OpenStreetMap contributors' }).addTo(map);
+const map = L.map('map').setView([51.892,21.621],13);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
+  attribution:'© OpenStreetMap contributors'
+}).addTo(map);
 
 // ===== DATA =====
 let units = JSON.parse(localStorage.getItem('units')) || [
-  { id:1, name:"OSP Pilawa - Średni GBA", lat:51.899, lon:21.621, status:"WOLNY", assignedCall:null },
-  { id:2, name:"OSP Pilawa - Ciężki GCBA", lat:51.899, lon:21.622, status:"WOLNY", assignedCall:null },
-  { id:3, name:"OSP Lipówki - Volvo GBA", lat:51.890, lon:21.613, status:"WOLNY", assignedCall:null },
-  { id:4, name:"OSP Lipówki - STAR 266", lat:51.891, lon:21.615, status:"WOLNY", assignedCall:null },
-  { id:5, name:"OSP Wygoda - Lekki Ford", lat:51.910, lon:21.630, status:"WOLNY", assignedCall:null },
-  { id:6, name:"OSP Puznówka - IVECO", lat:51.880, lon:21.610, status:"WOLNY", assignedCall:null },
-  { id:7, name:"OSP Gocław - MAN", lat:51.870, lon:21.635, status:"WOLNY", assignedCall:null }
+  { id:1, name:"OSP Lipówki - GBA", lat:51.8955, lon:21.6030, status:"WOLNY", assignedCall:null },
+  { id:2, name:"OSP Pilawa - Średni GBA", lat:51.9000, lon:21.6200, status:"WOLNY", assignedCall:null },
+  { id:3, name:"OSP Gocław - MAN", lat:51.8700, lon:21.6350, status:"WOLNY", assignedCall:null },
+  { id:4, name:"OSP Wygoda - GBA", lat:51.9100, lon:21.6300, status:"WOLNY", assignedCall:null },
+  { id:5, name:"OSP Puznówka - lekki", lat:51.8860, lon:21.6100, status:"WOLNY", assignedCall:null }
 ];
 let calls = JSON.parse(localStorage.getItem('calls')) || [];
+let history = JSON.parse(localStorage.getItem('history')) || [];
 
 // ===== MARKER GROUPS =====
 const unitMarkers = L.layerGroup().addTo(map);
 const callMarkers = L.layerGroup().addTo(map);
 
+// ===== SAVE =====
+function saveData(){
+  localStorage.setItem('units',JSON.stringify(units));
+  localStorage.setItem('calls',JSON.stringify(calls));
+  localStorage.setItem('history',JSON.stringify(history));
+}
+
+// ===== TAB SYSTEM =====
+document.querySelectorAll('.tab-link').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-link').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
 // ===== FUNCTIONS =====
-function saveData() {
-  localStorage.setItem('units', JSON.stringify(units));
-  localStorage.setItem('calls', JSON.stringify(calls));
-}
-
-function refreshUnits() {
-  const container = document.getElementById('unitsContainer');
-  container.innerHTML = '';
-  units.forEach(u => {
-    const div = document.createElement('div');
-    div.innerHTML = `<b>${u.name}</b> [${u.status}] ${u.assignedCall?'<br>Przydzielony: '+u.assignedCall.text:''}`;
-    div.onclick = ()=>showUnitDialog(u.id);
-    container.appendChild(div);
-  });
-  updateUnitMarkers();
-}
-
-function refreshCalls() {
-  const container = document.getElementById('callsContainer');
-  container.innerHTML = '';
-  calls.forEach(c=>{
-    const div = document.createElement('div');
-    div.innerHTML = `<b>${c.text}</b><br><i>${c.addr}</i>`;
-    div.onclick = ()=>assignUnitDialog(c.id);
-    container.appendChild(div);
-  });
-  updateCallMarkers();
-}
-
-function addCall() {
-  const text = document.getElementById('callText').value.trim();
-  const addr = document.getElementById('callAddress').value.trim();
-  if(!text || !addr){ alert("Wypełnij wszystkie pola!"); return; }
-  const call = { id:Date.now(), text, addr, lat:map.getCenter().lat, lon:map.getCenter().lng };
+function addCall(){
+  const text=document.getElementById('callText').value.trim();
+  const addr=document.getElementById('callAddress').value.trim();
+  if(!text||!addr){alert("Wypełnij pola!");return;}
+  const call={id:Date.now(),text,addr,lat:map.getCenter().lat,lon:map.getCenter().lng};
   calls.push(call);
-  saveData();
-  refreshCalls();
-  document.getElementById('callText').value = '';
-  document.getElementById('callAddress').value = '';
+  history.push({time:new Date().toLocaleString(), action:'Dodano zgłoszenie', item:call.text});
+  saveData(); refreshCalls(); document.getElementById('callText').value=''; document.getElementById('callAddress').value='';
 }
 
-function showUnitDialog(id) {
+function changeUnitStatus(id){
   const u = units.find(x=>x.id===id);
-  let status = prompt("Zmiana statusu (WOLNY / W DRODZE / NA MIEJSCU / DYSPOZYCJA):", u.status);
-  if(status){
-    u.status = status.toUpperCase();
-    saveData();
-    refreshUnits();
-  }
+  const s = prompt("Status (WOLNY / W DRODZE / NA MIEJSCU / DYSPOZYCJA):",u.status);
+  if(s){ u.status=s.toUpperCase(); history.push({time:new Date().toLocaleString(), action:'Zmiana statusu', item:u.name+' → '+u.status}); saveData(); refreshUnits();}
 }
 
-function assignUnitDialog(callId){
+function assignUnit(callId){
   const call = calls.find(c=>c.id===callId);
-  const unitNames = units.map(u=>u.name).join("\n");
-  const name = prompt("Wpisz nazwę jednostki do przydzielenia:\n"+unitNames);
+  const name = prompt("Podaj nazwę jednostki do przydzielenia:\n"+units.map(u=>u.name).join("\n"));
   const u = units.find(x=>x.name===name);
-  if(u){
-    u.assignedCall = call;
-    u.status="W DRODZE";
-    saveData();
-    refreshUnits();
-  } else alert("Nie znaleziono jednostki");
+  if(u){ u.assignedCall=call; u.status="W DRODZE"; history.push({time:new Date().toLocaleString(), action:'Przydzielono jednostkę', item:u.name+' → '+call.text}); saveData(); refreshUnits(); refreshHistory();}
+  else alert("Nie znaleziono jednostki!");
+}
+
+// ===== RENDER =====
+function refreshUnits(){
+  const cont=document.getElementById('unitsContainer'); cont.innerHTML='';
+  units.forEach(u=>{
+    const d=document.createElement('div');
+    d.innerHTML=`<b>${u.name}</b><br>Status: <span class="status-label">${u.status}</span>${u.assignedCall?'<br>Przydzielony do: '+u.assignedCall.text:''}`;
+    d.onclick=()=>changeUnitStatus(u.id);
+    cont.appendChild(d);
+  });
+  drawUnitMarkers();
+}
+
+function refreshCalls(){
+  const cont=document.getElementById('callsContainer'); cont.innerHTML='';
+  calls.forEach(c=>{
+    const d=document.createElement('div');
+    d.innerHTML=`<b>${c.text}</b><br><i>${c.addr}</i>`;
+    d.onclick=()=>assignUnit(c.id);
+    cont.appendChild(d);
+  });
+  drawCallMarkers();
+}
+
+function refreshHistory(){
+  const cont=document.getElementById('historyContainer'); cont.innerHTML='';
+  history.slice().reverse().forEach(h=>{
+    const d=document.createElement('div');
+    d.innerHTML=`[${h.time}] ${h.action}: ${h.item}`;
+    cont.appendChild(d);
+  });
 }
 
 // ===== MARKERS =====
-function updateUnitMarkers(){
+function drawUnitMarkers(){
   unitMarkers.clearLayers();
   units.forEach(u=>{
     const iconUrl = u.status==="NA MIEJSCU"? 'https://cdn-icons-png.flaticon.com/512/1140/1140128.png':
                     u.status==="W DRODZE"? 'https://cdn-icons-png.flaticon.com/512/1140/1140096.png':
                     'https://cdn-icons-png.flaticon.com/512/1140/1140116.png';
-    const marker = L.marker([u.lat,u.lon], {icon:L.icon({iconUrl,iconSize:[30,30]})})
-      .addTo(unitMarkers)
-      .bindPopup(`<b>${u.name}</b><br>Status: ${u.status}<br>${u.assignedCall?'<b>Przydzielony do:</b> '+u.assignedCall.text:''}`);
-    marker.on('click', ()=>showUnitDialog(u.id));
+    L.marker([u.lat,u.lon],{icon:L.icon({iconUrl,iconSize:[30,30]})})
+     .addTo(unitMarkers)
+     .bindPopup(`<b>${u.name}</b><br>Status: ${u.status}${u.assignedCall?'<br>Do: '+u.assignedCall.text:''}`)
+     .on('click',()=>changeUnitStatus(u.id));
   });
 }
 
-function updateCallMarkers(){
+function drawCallMarkers(){
   callMarkers.clearLayers();
   calls.forEach(c=>{
-    const marker = L.marker([c.lat,c.lon], {icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2838/2838886.png', iconSize:[32,32]})})
-      .addTo(callMarkers)
-      .bindPopup(`<b>Zgłoszenie:</b><br>${c.text}<br><i>${c.addr}</i>`);
-    marker.on('click', ()=>assignUnitDialog(c.id));
+    L.marker([c.lat,c.lon],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2838/2838886.png',iconSize:[32,32]})})
+     .addTo(callMarkers)
+     .bindPopup(`<b>Zgłoszenie:</b><br>${c.text}<br><i>${c.addr}</i>`)
+     .on('click',()=>assignUnit(c.id));
   });
 }
 
 // ===== INIT =====
-refreshUnits();
-refreshCalls();
+refreshUnits(); refreshCalls(); refreshHistory();
 </script>
 
 </body>
