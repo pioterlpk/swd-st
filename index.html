@@ -2,32 +2,46 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>SWD-ST Pilawa</title>
+<title>SWD-ST Pilawa | Profesjonalny</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <style>
-body, html {margin:0; padding:0; height:100%; font-family:Arial, sans-serif; background:#1e1e2f;}
-#map {width:100%; height:100%;}
+/* Global */
+body, html { margin:0; padding:0; height:100%; font-family: "Segoe UI",sans-serif; background:#1f1f2e; color:#fff;}
+#map { height:100%; width:100%; }
+
+/* Sidebar */
 .sidebar {
   position:absolute; top:10px; left:10px;
-  width:360px; max-height:95%; overflow-y:auto;
-  background:#2c2c3e; color:#fff; padding:12px; border-radius:10px;
-  box-shadow:0 0 15px rgba(0,0,0,0.5); z-index:1000;
+  width:380px; max-height:95%; overflow-y:auto;
+  background:#2b2b3f; padding:15px; border-radius:10px;
+  box-shadow:0 0 20px rgba(0,0,0,0.6); z-index:1000;
 }
-h2{margin:0 0 8px;font-size:16px; color:#fff;}
-input, textarea, button {
-  width:100%; margin:4px 0; padding:6px; border-radius:4px; border:none;
-  font-size:14px;
+h2 { margin:5px 0 8px; font-size:16px; color:#fff; }
+
+/* Tabs */
+.tab-header { display:flex; margin-bottom:10px; }
+.tab-header div {
+  flex:1; text-align:center; padding:8px; cursor:pointer;
+  border-bottom:2px solid #444; transition:0.3s; font-weight:bold;
 }
-input, textarea {background:#3a3a4f; color:#fff;}
-button {background:#007BFF; color:white; cursor:pointer;}
-button:hover {background:#0056b3;}
-.unit-list div, .call-list div {
-  padding:6px; margin-bottom:4px; border-radius:4px; cursor:pointer;
-  background:#3a3a4f; transition:0.2s;
+.tab-header .active { border-bottom:3px solid #1e90ff; color:#1e90ff; }
+.tab-content { display:none; }
+.tab-content.active { display:block; }
+
+/* Inputs/Buttons */
+input, textarea, select { width:100%; padding:6px; margin:4px 0; border-radius:5px; border:none; background:#3a3a5a; color:#fff;}
+button { width:100%; padding:8px; margin:5px 0; border:none; border-radius:5px; background:#1e90ff; color:#fff; cursor:pointer; font-weight:bold;}
+button:hover { background:#1570c0; }
+
+/* Lists */
+.unit-list div, .call-list div, .history-list div {
+  padding:8px; margin-bottom:4px; border-radius:6px; background:#3a3a5a; cursor:pointer;
+  transition:0.2s;
 }
-.unit-list div:hover, .call-list div:hover { background:#50506a;}
-.status-label {font-weight:bold;}
+.unit-list div:hover, .call-list div:hover, .history-list div:hover { background:#50507a; }
+
+.status-label { font-weight:bold; }
 </style>
 </head>
 <body>
@@ -35,27 +49,42 @@ button:hover {background:#0056b3;}
 <div id="map"></div>
 
 <div class="sidebar">
-  <h2>Dodaj zgłoszenie</h2>
-  <textarea id="callText" placeholder="Opis zdarzenia..." rows="3"></textarea>
-  <input id="callAddress" placeholder="Adres lub miejscowość"/>
-  <button onclick="addCall()">Dodaj zgłoszenie</button>
+  <div class="tab-header">
+    <div class="tab-link active" data-tab="callsTab">Zgłoszenia</div>
+    <div class="tab-link" data-tab="unitsTab">Jednostki</div>
+    <div class="tab-link" data-tab="historyTab">Historia</div>
+  </div>
 
-  <h2>Zgłoszenia</h2>
-  <div id="callsContainer" class="call-list"></div>
+  <!-- ZGŁOSZENIA -->
+  <div id="callsTab" class="tab-content active">
+    <h2>Dodaj zgłoszenie</h2>
+    <textarea id="callText" placeholder="Opis zdarzenia..." rows="3"></textarea>
+    <input id="callAddress" placeholder="Adres lub miejscowość"/>
+    <button onclick="addCall()">Dodaj zgłoszenie</button>
+    <h2>Lista zgłoszeń</h2>
+    <div id="callsContainer" class="call-list"></div>
+  </div>
 
-  <h2>Jednostki</h2>
-  <div id="unitsContainer" class="unit-list"></div>
+  <!-- JEDNOSTKI -->
+  <div id="unitsTab" class="tab-content">
+    <h2>Jednostki OSP</h2>
+    <div id="unitsContainer" class="unit-list"></div>
+  </div>
+
+  <!-- HISTORIA -->
+  <div id="historyTab" class="tab-content">
+    <h2>Historia akcji</h2>
+    <div id="historyContainer" class="history-list"></div>
+  </div>
 </div>
 
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 <script>
-// MAPA
+// ===== MAPA =====
 const map = L.map('map').setView([51.8915,21.618],13);
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{
-  attribution:'© OpenStreetMap contributors'
-}).addTo(map);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution:'© OpenStreetMap contributors' }).addTo(map);
 
-// DANE JEDNOSTEK
+// ===== DANE =====
 let units = JSON.parse(localStorage.getItem('units')) || [
   {id:1,name:"OSP Lipówki", vehicles:["GBA 427[M]81","GBA 427[M]82"], lat:51.8960, lon:21.6030, status:"WOLNY", assignedCall:null},
   {id:2,name:"OSP Pilawa", vehicles:["GBA 429[M]80","GCBA 429[M]81"], lat:51.9000, lon:21.6200, status:"WOLNY", assignedCall:null},
@@ -64,49 +93,65 @@ let units = JSON.parse(localStorage.getItem('units')) || [
   {id:5,name:"OSP Gocław", vehicles:["GBA 429[M]83","GBA 427[M]84"], lat:51.8700, lon:21.6350, status:"WOLNY", assignedCall:null}
 ];
 let calls = JSON.parse(localStorage.getItem('calls')) || [];
+let history = JSON.parse(localStorage.getItem('history')) || [];
 
 // MARKERY
 const unitMarkers = L.layerGroup().addTo(map);
 const callMarkers = L.layerGroup().addTo(map);
 
-// SAVE
+// ===== SAVE =====
 function saveData(){
   localStorage.setItem('units',JSON.stringify(units));
   localStorage.setItem('calls',JSON.stringify(calls));
+  localStorage.setItem('history',JSON.stringify(history));
 }
 
-// FUNKCJE
+// ===== TAB SYSTEM =====
+document.querySelectorAll('.tab-link').forEach(tab=>{
+  tab.addEventListener('click',()=>{
+    document.querySelectorAll('.tab-link').forEach(t=>t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(c=>c.classList.remove('active'));
+    tab.classList.add('active');
+    document.getElementById(tab.dataset.tab).classList.add('active');
+  });
+});
+
+// ===== FUNKCJE =====
 function addCall(){
   const text=document.getElementById('callText').value.trim();
   const addr=document.getElementById('callAddress').value.trim();
   if(!text||!addr){alert("Wypełnij pola!"); return;}
-  const call={id:Date.now(), text, addr, lat:map.getCenter().lat, lon:map.getCenter().lng};
-  calls.push(call); saveData(); refreshCalls();
-  document.getElementById('callText').value=''; document.getElementById('callAddress').value='';
+  const call={id:Date.now(),text,addr,lat:map.getCenter().lat,lon:map.getCenter().lng};
+  calls.push(call);
+  history.push({time:new Date().toLocaleString(), action:'Dodano zgłoszenie', item:call.text});
+  saveData(); refreshCalls(); document.getElementById('callText').value=''; document.getElementById('callAddress').value='';
 }
 
 function changeUnitStatus(id){
   const u = units.find(x=>x.id===id);
-  const s = prompt("Status (WOLNY / W DRODZE / NA MIEJSCU / DYSPOZYCJA / DYSPOZYCJA - 🚨):",u.status);
+  const s = prompt("Status (WOLNY / W DRODZE / NA MIEJSCU / DYSPOZYCJA):",u.status);
   if(s){
-    u.status=s.toUpperCase();
-    saveData(); refreshUnits();
+    u.status = s.toUpperCase();
+    history.push({time:new Date().toLocaleString(), action:'Zmiana statusu', item:u.name+' → '+u.status});
+    saveData(); refreshUnits(); refreshHistory();
   }
 }
 
 function assignUnit(callId){
   const call = calls.find(c=>c.id===callId);
-  const name=prompt("Podaj nazwę jednostki do przydzielenia:\n"+units.map(u=>u.name).join("\n"));
+  const name = prompt("Podaj nazwę jednostki do przydzielenia:\n"+units.map(u=>u.name).join("\n"));
   const u = units.find(x=>x.name===name);
-  if(u){u.assignedCall=call; u.status="W DRODZE"; saveData(); refreshUnits();}
-  else alert("Nie znaleziono jednostki!");
+  if(u){ u.assignedCall=call; u.status="W DRODZE";
+    history.push({time:new Date().toLocaleString(), action:'Przydzielono jednostkę', item:u.name+' → '+call.text});
+    saveData(); refreshUnits(); refreshHistory();
+  } else alert("Nie znaleziono jednostki!");
 }
 
-// RENDER
+// ===== RENDER =====
 function refreshUnits(){
   const cont=document.getElementById('unitsContainer'); cont.innerHTML='';
   units.forEach(u=>{
-    const emoji = u.status==="WOLNY"?"🟢": u.status==="W DRODZE"?"🟡": u.status==="NA MIEJSCU"?"🔵": u.status.includes("DYSPOZYCJA")?"🚨":"⚪";
+    const emoji = u.status==="WOLNY"?"🟢": u.status==="W DRODZE"?"🟡": u.status==="NA MIEJSCU"?"🔵": "🚨";
     const d=document.createElement('div');
     d.innerHTML=`${emoji} <b>${u.name}</b><br>Pojazdy: ${u.vehicles.join(", ")}<br>Status: <span class="status-label">${u.status}</span>${u.assignedCall?'<br>Przydzielony do: '+u.assignedCall.text:''}`;
     d.onclick=()=>changeUnitStatus(u.id);
@@ -126,6 +171,15 @@ function refreshCalls(){
   drawCallMarkers();
 }
 
+function refreshHistory(){
+  const cont=document.getElementById('historyContainer'); cont.innerHTML='';
+  history.slice().reverse().forEach(h=>{
+    const d=document.createElement('div');
+    d.innerHTML=`[${h.time}] ${h.action}: ${h.item}`;
+    cont.appendChild(d);
+  });
+}
+
 function drawUnitMarkers(){
   unitMarkers.clearLayers();
   units.forEach(u=>{
@@ -133,7 +187,7 @@ function drawUnitMarkers(){
                     u.status==="W DRODZE"?'https://cdn-icons-png.flaticon.com/512/1140/1140096.png':
                     u.status==="NA MIEJSCU"?'https://cdn-icons-png.flaticon.com/512/1140/1140128.png':
                     'https://cdn-icons-png.flaticon.com/512/1140/1140106.png';
-    L.marker([u.lat,u.lon],{icon:L.icon({iconUrl, iconSize:[30,30]})})
+    L.marker([u.lat,u.lon],{icon:L.icon({iconUrl,iconSize:[30,30]})})
       .addTo(unitMarkers)
       .bindPopup(`<b>${u.name}</b><br>Pojazdy: ${u.vehicles.join(", ")}<br>Status: ${u.status}${u.assignedCall?'<br>Do: '+u.assignedCall.text:''}`)
       .on('click',()=>changeUnitStatus(u.id));
@@ -143,15 +197,16 @@ function drawUnitMarkers(){
 function drawCallMarkers(){
   callMarkers.clearLayers();
   calls.forEach(c=>{
-    L.marker([c.lat,c.lon],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2838/2838886.png', iconSize:[32,32]})})
+    L.marker([c.lat,c.lon],{icon:L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/2838/2838886.png',iconSize:[32,32]})})
       .addTo(callMarkers)
       .bindPopup(`<b>Zgłoszenie:</b><br>${c.text}<br><i>${c.addr}</i>`)
       .on('click',()=>assignUnit(c.id));
   });
 }
 
-// INIT
-refreshUnits(); refreshCalls();
+// ===== INIT =====
+refreshUnits(); refreshCalls(); refreshHistory();
 </script>
+
 </body>
 </html>
