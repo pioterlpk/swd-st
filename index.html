@@ -9,14 +9,7 @@
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
-:root {
-  --red:#b30000;
-  --dark:#1c1f26;
-  --gray:#2a2e38;
-  --light:#f4f6f9;
-  --green:#2ecc71;
-}
-
+:root{--red:#b30000;--dark:#1c1f26;--gray:#2a2e38;--light:#f4f6f9;--green:#2ecc71}
 *{box-sizing:border-box;font-family:Inter;margin:0;padding:0}
 body{background:var(--light)}
 header{background:linear-gradient(90deg,#8b0000,var(--red));color:#fff;padding:16px 24px;display:flex;justify-content:space-between}
@@ -26,14 +19,15 @@ nav button.active{background:var(--red)}
 .container{display:flex;height:calc(100vh - 96px)}
 .sidebar{width:260px;background:var(--gray);color:#fff;padding:20px}
 .stat{background:var(--dark);padding:12px;border-radius:8px;margin-bottom:10px}
-.stat strong{font-size:20px}
 .main{flex:1;padding:20px;overflow:auto}
 .card{background:#fff;border-radius:10px;padding:16px;margin-bottom:20px;box-shadow:0 10px 25px rgba(0,0,0,.08)}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{padding:8px;border-bottom:1px solid #eee}
 .status{padding:4px 8px;border-radius:20px;font-size:11px;font-weight:600}
 .active{background:#ffe6e6;color:var(--red)}
-.closed{background:#e8f8ef;color:var(--green)}
+.free{background:#e8f8ef;color:var(--green)}
+.busy{background:#ffe6e6;color:#c0392b}
+.off{background:#eee;color:#555}
 button.small{padding:4px 8px;font-size:11px;border:none;border-radius:4px;cursor:pointer}
 .del{background:#e74c3c;color:#fff}
 .hidden{display:none}
@@ -58,9 +52,9 @@ form button{background:var(--red);color:#fff;border:none;border-radius:6px}
 
 <div class="container">
   <aside class="sidebar">
-    <div class="stat"><strong id="total">0</strong><br><span>Zdarzenia</span></div>
-    <div class="stat"><strong id="active">0</strong><br><span>Aktywne</span></div>
-    <div class="stat"><strong>OSP</strong><br><span>na mapie</span></div>
+    <div class="stat"><strong id="total">0</strong><br>Zdarzenia</div>
+    <div class="stat"><strong id="active">0</strong><br>Aktywne</div>
+    <div class="stat"><strong id="freeUnits">0</strong><br>Jednostki wolne</div>
   </aside>
 
   <main class="main">
@@ -70,14 +64,14 @@ form button{background:var(--red);color:#fff;border:none;border-radius:6px}
       <div class="card">
         <h3>Mapa operacyjna</h3>
         <div id="map"></div>
-        <p style="font-size:12px;margin-top:6px">🔴 Zdarzenia – przeciągnij marker | 🔵 OSP</p>
+        <p style="font-size:12px;margin-top:6px">🔴 Zdarzenia (przeciągalne) • 🔵 OSP</p>
       </div>
 
       <div class="card">
-        <h3>Lista zdarzeń</h3>
+        <h3>Zdarzenia</h3>
         <table>
           <thead>
-            <tr><th>ID</th><th>Typ</th><th>Miejsce</th><th>Status</th><th></th></tr>
+            <tr><th>ID</th><th>Typ</th><th>Lokalizacja</th><th>Jednostki</th><th></th></tr>
           </thead>
           <tbody id="eventsTable"></tbody>
         </table>
@@ -91,10 +85,6 @@ form button{background:var(--red);color:#fff;border:none;border-radius:6px}
         <form id="addEvent">
           <input id="etype" placeholder="Typ zdarzenia" required>
           <input id="eloc" placeholder="Lokalizacja" required>
-          <select id="estatus">
-            <option value="active">W trakcie</option>
-            <option value="closed">Zakończone</option>
-          </select>
           <button>Dodaj zdarzenie</button>
         </form>
       </div>
@@ -103,13 +93,22 @@ form button{background:var(--red);color:#fff;border:none;border-radius:6px}
     <!-- JEDNOSTKI -->
     <div id="units" class="tabc hidden">
       <div class="card">
-        <h3>Jednostki OSP (stałe na mapie)</h3>
-        <ul>
-          <li>OSP Garwolin</li>
-          <li>OSP Wilga</li>
-          <li>OSP Łaskarzew</li>
-          <li>OSP Sobolew</li>
-        </ul>
+        <h3>Przydziel jednostkę do zdarzenia</h3>
+        <form id="assignForm">
+          <select id="eventSelect" required></select>
+          <select id="unitSelect" required></select>
+          <button>Przydziel</button>
+        </form>
+      </div>
+
+      <div class="card">
+        <h3>Jednostki OSP</h3>
+        <table>
+          <thead>
+            <tr><th>Nazwa</th><th>Status</th></tr>
+          </thead>
+          <tbody id="unitsTable"></tbody>
+        </table>
       </div>
     </div>
 
@@ -121,72 +120,101 @@ form button{background:var(--red);color:#fff;border:none;border-radius:6px}
 /* TABS */
 document.querySelectorAll('.tab').forEach(b=>{
   b.onclick=()=>{
-    document.querySelectorAll('.tab,.tabc').forEach(x=>x.classList.remove('active','hidden'));
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.tabc').forEach(x=>x.classList.add('hidden'));
     b.classList.add('active');
-    document.querySelectorAll('.tabc').forEach(c=>c.classList.add('hidden'));
     document.getElementById(b.dataset.tab).classList.remove('hidden');
+    refreshSelects();
   }
 });
 
-/* MAPA */
-const map = L.map('map').setView([51.897,21.614],10);
+/* MAP */
+const map=L.map('map').setView([51.897,21.614],10);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(map);
 
-const eventIcon = L.icon({
-  iconUrl:'https://cdn-icons-png.flaticon.com/512/482/482947.png',
-  iconSize:[28,28]
-});
-const ospIcon = L.icon({
-  iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',
-  iconSize:[26,26]
-});
+const eventIcon=L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/482/482947.png',iconSize:[28,28]});
+const ospIcon=L.icon({iconUrl:'https://cdn-icons-png.flaticon.com/512/684/684908.png',iconSize:[26,26]});
 
-/* OSP */
-[
- {n:'OSP Garwolin',c:[51.897,21.614]},
- {n:'OSP Wilga',c:[51.852,21.377]},
- {n:'OSP Łaskarzew',c:[51.789,21.593]},
- {n:'OSP Sobolew',c:[51.736,21.659]}
-].forEach(u=>{
-  L.marker(u.c,{icon:ospIcon}).addTo(map).bindPopup(u.n);
-});
+/* UNITS */
+const units=[
+ {name:'OSP Garwolin',status:'free',pos:[51.897,21.614]},
+ {name:'OSP Wilga',status:'free',pos:[51.852,21.377]},
+ {name:'OSP Łaskarzew',status:'free',pos:[51.789,21.593]},
+ {name:'OSP Sobolew',status:'free',pos:[51.736,21.659]}
+];
+units.forEach(u=>u.marker=L.marker(u.pos,{icon:ospIcon}).addTo(map).bindPopup(u.name));
 
+/* EVENTS */
+const events=[];
 const eventsTable=document.getElementById('eventsTable');
-let events=[];
 
-/* DODAJ ZDARZENIE */
-document.getElementById('addEvent').onsubmit=e=>{
-  e.preventDefault();
-  const id='2026/'+Math.floor(Math.random()*900+100);
-  const type=etype.value,loc=eloc.value,st=estatus.value;
-  const marker=L.marker(map.getCenter(),{icon:eventIcon,draggable:true}).addTo(map)
-    .bindPopup(`${type}<br>${loc}`);
-  events.push({id,type,loc,st,marker});
-  render();
-  e.target.reset();
+addEvent.onsubmit=e=>{
+ e.preventDefault();
+ const ev={
+  id:'2026/'+Math.floor(Math.random()*900+100),
+  type:etype.value,
+  loc:eloc.value,
+  units:[],
+  marker:L.marker(map.getCenter(),{icon:eventIcon,draggable:true}).addTo(map)
+ };
+ events.push(ev);
+ render();
+ e.target.reset();
 };
 
 function render(){
-  eventsTable.innerHTML='';
-  let a=0;
-  events.forEach((e,i)=>{
-    if(e.st==='active')a++;
-    const tr=document.createElement('tr');
-    tr.innerHTML=`
-      <td>#${e.id}</td>
-      <td>${e.type}</td>
-      <td>${e.loc}</td>
-      <td><span class="status ${e.st}">${e.st}</span></td>
-      <td><button class="small del">❌</button></td>`;
-    tr.querySelector('button').onclick=()=>{
-      map.removeLayer(e.marker);
-      events.splice(i,1);
-      render();
-    };
-    eventsTable.appendChild(tr);
-  });
-  total.textContent=events.length;
-  active.textContent=a;
+ eventsTable.innerHTML='';
+ events.forEach((e,i)=>{
+  const tr=document.createElement('tr');
+  tr.innerHTML=`
+   <td>#${e.id}</td>
+   <td>${e.type}</td>
+   <td>${e.loc}</td>
+   <td>${e.units.join(', ')||'-'}</td>
+   <td><button class="small del">❌</button></td>`;
+  tr.querySelector('button').onclick=()=>{
+   e.units.forEach(n=>units.find(u=>u.name===n).status='free');
+   map.removeLayer(e.marker);
+   events.splice(i,1);
+   render();
+  };
+  eventsTable.appendChild(tr);
+ });
+ updateStats();
+ renderUnits();
+ refreshSelects();
+}
+
+function renderUnits(){
+ unitsTable.innerHTML='';
+ units.forEach(u=>{
+  unitsTable.innerHTML+=`<tr><td>${u.name}</td>
+  <td><span class="status ${u.status==='free'?'free':'busy'}">${u.status}</span></td></tr>`;
+ });
+}
+
+function refreshSelects(){
+ eventSelect.innerHTML='<option value="">Zdarzenie</option>';
+ events.forEach(e=>eventSelect.innerHTML+=`<option>${e.id}</option>`);
+ unitSelect.innerHTML='<option value="">Jednostka</option>';
+ units.filter(u=>u.status==='free').forEach(u=>unitSelect.innerHTML+=`<option>${u.name}</option>`);
+}
+
+assignForm.onsubmit=e=>{
+ e.preventDefault();
+ const ev=events.find(x=>x.id===eventSelect.value);
+ const un=units.find(x=>x.name===unitSelect.value);
+ if(ev&&un){
+  ev.units.push(un.name);
+  un.status='busy';
+  render();
+ }
+};
+
+function updateStats(){
+ total.textContent=events.length;
+ active.textContent=events.length;
+ freeUnits.textContent=units.filter(u=>u.status==='free').length;
 }
 </script>
 
