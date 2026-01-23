@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>SWD-ST | System Dyspozytorski PSP</title>
+<title>SWD-ST | System Dyspozytorski</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
@@ -23,7 +23,7 @@ body{margin:0;background:var(--bg)}
 /* LOGIN */
 #login{
 height:100vh;display:flex;justify-content:center;align-items:center;
-background:linear-gradient(135deg,#8b0000,#b30000)
+background:linear-gradient(135deg,#6e0000,#b30000)
 }
 #login .box{
 background:#fff;padding:30px;border-radius:12px;width:320px;
@@ -33,19 +33,20 @@ box-shadow:0 20px 40px rgba(0,0,0,.3)
 #login input,#login button{
 width:100%;padding:10px;margin-bottom:12px;font-size:14px
 }
-#login button{background:var(--red);color:#fff;border:none;border-radius:6px}
+#login button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
 
-/* APP */
+/* HEADER */
 header{
 background:var(--dark);color:#fff;padding:14px 20px;
 display:flex;justify-content:space-between;align-items:center
 }
 header nav button{
 background:none;border:none;color:#fff;
-margin-right:10px;font-weight:600;cursor:pointer
+margin-right:12px;font-weight:600;cursor:pointer
 }
-header nav button.active{color:#ff4d4d}
+header nav button:hover{color:#ff8080}
 
+/* LAYOUT */
 #app{
 height:calc(100vh - 56px);
 display:grid;
@@ -74,27 +75,35 @@ display:inline-block;padding:4px 8px;border-radius:20px;
 font-size:11px;margin:2px;color:#fff
 }
 .WOLNY{background:#2ecc71}
-.DYSPOZYCJA{background:#f1c40f}
-.WDRODZE{background:#3498db}
-.NAMIEJSCU{background:#e74c3c}
+.DYSPOZYCJA{background:#f1c40f;color:#000}
+.W_DRODZE{background:#3498db}
+.NA_MIEJSCU{background:#e74c3c}
 .POWROT{background:#9b59b6}
 .GOSPODARCZY{background:#7f8c8d}
 
-/* RIGHT */
+/* MAP */
 #map{height:100%}
 
-/* MODAL */
+/* MODALS */
 .modal{
 position:fixed;top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center
+background:rgba(0,0,0,.55);
+display:flex;align-items:center;justify-content:center;
+z-index:9999
 }
+.modal.hidden{display:none}
 .modal .box{
 background:#fff;padding:20px;border-radius:10px;width:360px
 }
 .modal input,.modal textarea,.modal select,.modal button{
 width:100%;padding:8px;margin-bottom:10px
 }
-.modal button{background:var(--red);color:#fff;border:none}
+.modal button{
+background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer
+}
+.close{
+float:right;border:none;background:none;font-size:18px;cursor:pointer
+}
 </style>
 </head>
 
@@ -116,8 +125,7 @@ width:100%;padding:8px;margin-bottom:10px
 <header>
   <strong>SWD-ST | Dyspozytornia</strong>
   <nav>
-    <button class="active">Zgłoszenia</button>
-    <button onclick="openAddEvent()">+ Nowe zgłoszenie</button>
+    <button onclick="openAddEvent()">+ Zgłoszenie</button>
     <button onclick="openAddUnit()">+ Jednostka</button>
   </nav>
 </header>
@@ -128,27 +136,30 @@ width:100%;padding:8px;margin-bottom:10px
 </div>
 </div>
 
-<!-- MODALS -->
-<div id="addEvent" class="modal hidden">
- <div class="box">
+<!-- MODAL: EVENT -->
+<div id="addEventModal" class="modal hidden" onclick="closeModals()">
+ <div class="box" onclick="event.stopPropagation()">
+  <button class="close" onclick="closeModals()">✖</button>
   <h3>Nowe zgłoszenie</h3>
-  <input id="etitle" placeholder="Tytuł">
+  <input id="etitle" placeholder="Tytuł zgłoszenia">
   <textarea id="edesc" placeholder="Opis"></textarea>
   <input id="eloc" placeholder="Lokalizacja">
   <button onclick="addEvent()">Dodaj</button>
  </div>
 </div>
 
-<div id="addUnit" class="modal hidden">
- <div class="box">
+<!-- MODAL: UNIT -->
+<div id="addUnitModal" class="modal hidden" onclick="closeModals()">
+ <div class="box" onclick="event.stopPropagation()">
+  <button class="close" onclick="closeModals()">✖</button>
   <h3>Nowa jednostka</h3>
   <input id="uname" placeholder="Nazwa jednostki">
   <select id="ustatus">
     <option>WOLNY</option>
     <option>DYSPOZYCJA</option>
-    <option>W DRODZE</option>
-    <option>NA MIEJSCU</option>
-    <option>POWRÓT</option>
+    <option>W_DRODZE</option>
+    <option>NA_MIEJSCU</option>
+    <option>POWROT</option>
     <option>GOSPODARCZY</option>
   </select>
   <button onclick="addUnit()">Dodaj</button>
@@ -171,18 +182,16 @@ let map;
 function init(){
  map=L.map('map').setView([51.9,21.6],10);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
- render();
 }
 
 /* DATA */
 let units=[
  {name:"OSP Garwolin",status:"WOLNY"},
- {name:"OSP Wilga",status:"W DRODZE"}
+ {name:"OSP Wilga",status:"W_DRODZE"}
 ];
-
 let events=[];
 
-/* EVENTS */
+/* RENDER */
 function render(){
  left.innerHTML="";
  events.forEach(e=>{
@@ -195,7 +204,7 @@ function render(){
      <p>${e.desc}</p>
      <p><strong>Data:</strong> ${e.date}</p>
      <p><strong>Jednostki:</strong><br>
-     ${e.units.map(u=>`<span class="badge ${u.status.replace(" ","")}">${u.name} – ${u.status}</span>`).join("")}
+       ${units.map(u=>`<span class="badge ${u.status}">${u.name} – ${u.status.replace("_"," ")}</span>`).join("")}
      </p>
    </div>`;
   d.onclick=()=>{
@@ -207,30 +216,33 @@ function render(){
  });
 }
 
+/* EVENTS */
 function addEvent(){
  const ev={
   title:etitle.value,
   desc:edesc.value,
   loc:eloc.value,
   date:new Date().toLocaleString(),
-  units:JSON.parse(JSON.stringify(units)),
   marker:L.marker(map.getCenter()).addTo(map).bindPopup(etitle.value)
  };
  events.push(ev);
- closeModals();render();
+ closeModals();
+ render();
 }
 
+/* UNITS */
 function addUnit(){
  units.push({name:uname.value,status:ustatus.value});
  closeModals();
+ render();
 }
 
 /* MODALS */
-function openAddEvent(){addEvent.classList.remove("hidden")}
-function openAddUnit(){addUnit.classList.remove("hidden")}
+function openAddEvent(){document.getElementById("addEventModal").classList.remove("hidden")}
+function openAddUnit(){document.getElementById("addUnitModal").classList.remove("hidden")}
 function closeModals(){
- addEvent.classList.add("hidden");
- addUnit.classList.add("hidden");
+ document.getElementById("addEventModal").classList.add("hidden");
+ document.getElementById("addUnitModal").classList.add("hidden");
 }
 </script>
 
