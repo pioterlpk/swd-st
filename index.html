@@ -21,19 +21,19 @@ body{margin:0;background:var(--bg)}
 .hidden{display:none}
 
 /* LOGIN */
-#login{
+#loginScreen{
 height:100vh;display:flex;justify-content:center;align-items:center;
 background:linear-gradient(135deg,#6e0000,#b30000)
 }
-#login .box{
+#loginScreen .box{
 background:#fff;padding:30px;border-radius:12px;width:320px;
 box-shadow:0 20px 40px rgba(0,0,0,.3)
 }
-#login h2{text-align:center;margin-bottom:20px}
-#login input,#login button{
+#loginScreen h2{text-align:center;margin-bottom:20px}
+#loginScreen input,#loginScreen button{
 width:100%;padding:10px;margin-bottom:12px;font-size:14px
 }
-#login button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
+#loginScreen button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
 
 /* HEADER */
 header{
@@ -44,7 +44,6 @@ header nav button{
 background:none;border:none;color:#fff;
 margin-right:12px;font-weight:600;cursor:pointer
 }
-header nav button:hover{color:#ff8080}
 
 /* LAYOUT */
 #app{
@@ -66,14 +65,10 @@ padding:14px;cursor:pointer
 .event:hover{background:#f9f9f9}
 .event h4{margin:0;font-size:14px}
 .event small{color:#666}
+.event-details{margin-top:10px;font-size:13px}
 
-.event-details{
-margin-top:10px;font-size:13px;color:#333
-}
-.badge{
-display:inline-block;padding:4px 8px;border-radius:20px;
-font-size:11px;margin:2px;color:#fff
-}
+/* BADGES */
+.badge{padding:4px 8px;border-radius:20px;font-size:11px;color:#fff;display:inline-block;margin:2px}
 .WOLNY{background:#2ecc71}
 .DYSPOZYCJA{background:#f1c40f;color:#000}
 .W_DRODZE{background:#3498db}
@@ -86,42 +81,34 @@ font-size:11px;margin:2px;color:#fff
 
 /* MODALS */
 .modal{
-position:fixed;top:0;left:0;width:100%;height:100%;
-background:rgba(0,0,0,.55);
-display:flex;align-items:center;justify-content:center;
-z-index:9999
+position:fixed;inset:0;background:rgba(0,0,0,.55);
+display:flex;align-items:center;justify-content:center;z-index:9999
 }
 .modal.hidden{display:none}
-.modal .box{
-background:#fff;padding:20px;border-radius:10px;width:360px
-}
+.modal .box{background:#fff;padding:20px;border-radius:10px;width:360px}
 .modal input,.modal textarea,.modal select,.modal button{
 width:100%;padding:8px;margin-bottom:10px
 }
-.modal button{
-background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer
-}
-.close{
-float:right;border:none;background:none;font-size:18px;cursor:pointer
-}
+.modal button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
+.close{float:right;background:none;border:none;font-size:18px;cursor:pointer}
 </style>
 </head>
 
 <body>
 
 <!-- LOGIN -->
-<div id="login">
+<div id="loginScreen">
   <div class="box">
     <h2>System SWD-ST</h2>
     <input id="loginUser" placeholder="Login">
     <input id="loginPass" type="password" placeholder="Hasło">
-    <button onclick="login()">Zaloguj</button>
-    <small id="err" style="color:red"></small>
+    <button id="loginBtn">Zaloguj</button>
+    <small id="loginErr" style="color:red"></small>
   </div>
 </div>
 
 <!-- APP -->
-<div id="main" class="hidden">
+<div id="mainApp" class="hidden">
 <header>
   <strong>SWD-ST | Dyspozytornia</strong>
   <nav>
@@ -136,24 +123,23 @@ float:right;border:none;background:none;font-size:18px;cursor:pointer
 </div>
 </div>
 
-<!-- MODAL: EVENT -->
+<!-- MODALS -->
 <div id="addEventModal" class="modal hidden" onclick="closeModals()">
  <div class="box" onclick="event.stopPropagation()">
   <button class="close" onclick="closeModals()">✖</button>
   <h3>Nowe zgłoszenie</h3>
-  <input id="etitle" placeholder="Tytuł zgłoszenia">
+  <input id="etitle" placeholder="Tytuł">
   <textarea id="edesc" placeholder="Opis"></textarea>
   <input id="eloc" placeholder="Lokalizacja">
   <button onclick="addEvent()">Dodaj</button>
  </div>
 </div>
 
-<!-- MODAL: UNIT -->
 <div id="addUnitModal" class="modal hidden" onclick="closeModals()">
  <div class="box" onclick="event.stopPropagation()">
   <button class="close" onclick="closeModals()">✖</button>
   <h3>Nowa jednostka</h3>
-  <input id="uname" placeholder="Nazwa jednostki">
+  <input id="uname" placeholder="Nazwa">
   <select id="ustatus">
     <option>WOLNY</option>
     <option>DYSPOZYCJA</option>
@@ -169,30 +155,32 @@ float:right;border:none;background:none;font-size:18px;cursor:pointer
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* LOGIN */
-function login(){
- if(loginUser.value==="OSPLipowki" && loginPass.value==="Sylwek123"){
-  login.style.display="none";
-  main.classList.remove("hidden");
-  init();
- }else err.textContent="Błędny login lub hasło";
-}
+document.getElementById("loginBtn").onclick = () => {
+ const u = document.getElementById("loginUser").value;
+ const p = document.getElementById("loginPass").value;
+ if(u==="OSPLipowki" && p==="Sylwek123"){
+   document.getElementById("loginScreen").style.display="none";
+   document.getElementById("mainApp").classList.remove("hidden");
+   initMap();
+ } else {
+   document.getElementById("loginErr").textContent="Błędny login lub hasło";
+ }
+};
 
 /* MAP */
 let map;
-function init(){
+function initMap(){
  map=L.map('map').setView([51.9,21.6],10);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 }
 
 /* DATA */
-let units=[
- {name:"OSP Garwolin",status:"WOLNY"},
- {name:"OSP Wilga",status:"W_DRODZE"}
-];
+let units=[{name:"OSP Garwolin",status:"WOLNY"}];
 let events=[];
 
 /* RENDER */
 function render(){
+ const left=document.getElementById("left");
  left.innerHTML="";
  events.forEach(e=>{
   const d=document.createElement("div");
@@ -202,47 +190,40 @@ function render(){
    <small>${e.loc}</small>
    <div class="event-details hidden">
      <p>${e.desc}</p>
-     <p><strong>Data:</strong> ${e.date}</p>
-     <p><strong>Jednostki:</strong><br>
-       ${units.map(u=>`<span class="badge ${u.status}">${u.name} – ${u.status.replace("_"," ")}</span>`).join("")}
-     </p>
+     <p>${e.date}</p>
+     ${units.map(u=>`<span class="badge ${u.status}">${u.name}</span>`).join("")}
    </div>`;
   d.onclick=()=>{
-   d.querySelector(".event-details").classList.toggle("hidden");
-   map.setView(e.marker.getLatLng(),13);
-   e.marker.openPopup();
+    d.querySelector(".event-details").classList.toggle("hidden");
+    map.flyTo(e.marker.getLatLng(),13);
   };
   left.appendChild(d);
  });
 }
 
-/* EVENTS */
+/* ADD */
 function addEvent(){
  const ev={
   title:etitle.value,
   desc:edesc.value,
   loc:eloc.value,
   date:new Date().toLocaleString(),
-  marker:L.marker(map.getCenter()).addTo(map).bindPopup(etitle.value)
+  marker:L.marker(map.getCenter()).addTo(map)
  };
  events.push(ev);
- closeModals();
- render();
+ closeModals();render();
 }
-
-/* UNITS */
 function addUnit(){
  units.push({name:uname.value,status:ustatus.value});
- closeModals();
- render();
+ closeModals();render();
 }
 
 /* MODALS */
-function openAddEvent(){document.getElementById("addEventModal").classList.remove("hidden")}
-function openAddUnit(){document.getElementById("addUnitModal").classList.remove("hidden")}
+function openAddEvent(){addEventModal.classList.remove("hidden")}
+function openAddUnit(){addUnitModal.classList.remove("hidden")}
 function closeModals(){
- document.getElementById("addEventModal").classList.add("hidden");
- document.getElementById("addUnitModal").classList.add("hidden");
+ addEventModal.classList.add("hidden");
+ addUnitModal.classList.add("hidden");
 }
 </script>
 
