@@ -2,74 +2,97 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>SWD-ST | System Dyspozytorski</title>
+<title>SWD-ST PRO | Dyspozytornia</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 :root{
---bg:#f2f4f8;
---dark:#1c1f26;
---red:#b30000;
---panel:#ffffff;
---border:#e0e0e0;
+--bg:#0e1014;
+--panel:#151922;
+--panel2:#1b2030;
+--accent:#ff2a2a;
+--accent2:#ff6a00;
+--text:#e6e6e6;
+--muted:#9aa0b3;
+--glass:rgba(255,255,255,.04);
+--blur:blur(14px);
 }
 *{box-sizing:border-box;font-family:Inter}
-body{margin:0;background:var(--bg)}
+body{margin:0;background:var(--bg);color:var(--text)}
 .hidden{display:none}
 
 /* LOGIN */
 #loginScreen{
-height:100vh;display:flex;justify-content:center;align-items:center;
-background:linear-gradient(135deg,#6e0000,#b30000)
+height:100vh;display:flex;align-items:center;justify-content:center;
+background:radial-gradient(circle at top,#300,#000)
 }
-#loginScreen .box{
-background:#fff;padding:30px;border-radius:12px;width:320px;
-box-shadow:0 20px 40px rgba(0,0,0,.3)
+.loginBox{
+background:var(--panel);
+padding:30px;border-radius:16px;width:320px;
+box-shadow:0 0 60px #ff2a2a33
 }
-#loginScreen h2{text-align:center;margin-bottom:20px}
-#loginScreen input,#loginScreen button{
-width:100%;padding:10px;margin-bottom:12px;font-size:14px
+.loginBox h2{text-align:center;margin-bottom:20px}
+.loginBox input,button{
+width:100%;padding:12px;margin-bottom:12px;
+border:none;border-radius:10px;
+background:var(--panel2);color:var(--text)
 }
-#loginScreen button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
+.loginBox button{
+background:linear-gradient(135deg,var(--accent),var(--accent2));
+cursor:pointer;font-weight:700
+}
 
 /* HEADER */
 header{
-background:var(--dark);color:#fff;padding:14px 20px;
-display:flex;justify-content:space-between;align-items:center
+height:56px;
+background:linear-gradient(90deg,#0f121a,#1b2030);
+display:flex;align-items:center;justify-content:space-between;
+padding:0 20px;border-bottom:1px solid #222
 }
 header nav button{
-background:none;border:none;color:#fff;
-margin-right:12px;font-weight:600;cursor:pointer
+background:none;border:none;color:var(--text);
+margin-left:15px;cursor:pointer;font-weight:600
 }
+header nav button:hover{color:var(--accent)}
 
 /* LAYOUT */
 #app{
-height:calc(100vh - 56px);
 display:grid;
-grid-template-columns:420px 1fr;
+grid-template-columns:380px 1fr;
+height:calc(100vh - 56px)
 }
 
-/* LEFT */
+/* LEFT PANEL */
 #left{
 background:var(--panel);
-border-right:1px solid var(--border);
+border-right:1px solid #222;
 overflow:auto
 }
-.event{
-border-bottom:1px solid var(--border);
-padding:14px;cursor:pointer
+.panelHeader{
+padding:14px;
+font-weight:700;
+background:var(--glass);
+backdrop-filter:var(--blur)
 }
-.event:hover{background:#f9f9f9}
+.event{
+padding:14px;
+border-bottom:1px solid #222;
+cursor:pointer
+}
+.event:hover{background:#ffffff05}
 .event h4{margin:0;font-size:14px}
-.event small{color:#666}
-.event-details{margin-top:10px;font-size:13px}
+.event small{color:var(--muted)}
+.details{margin-top:10px;font-size:13px}
 
 /* BADGES */
-.badge{padding:4px 8px;border-radius:20px;font-size:11px;color:#fff;display:inline-block;margin:2px}
-.WOLNY{background:#2ecc71}
+.badge{
+padding:4px 8px;border-radius:20px;font-size:11px;
+display:inline-block;margin:2px;font-weight:600
+}
+.WOLNY{background:#2ecc71;color:#000}
 .DYSPOZYCJA{background:#f1c40f;color:#000}
 .W_DRODZE{background:#3498db}
 .NA_MIEJSCU{background:#e74c3c}
@@ -79,18 +102,30 @@ padding:14px;cursor:pointer
 /* MAP */
 #map{height:100%}
 
-/* MODALS */
+/* MODAL */
 .modal{
-position:fixed;inset:0;background:rgba(0,0,0,.55);
-display:flex;align-items:center;justify-content:center;z-index:9999
+position:fixed;inset:0;
+background:rgba(0,0,0,.7);
+display:flex;align-items:center;justify-content:center;
+z-index:9999
 }
-.modal.hidden{display:none}
-.modal .box{background:#fff;padding:20px;border-radius:10px;width:360px}
-.modal input,.modal textarea,.modal select,.modal button{
-width:100%;padding:8px;margin-bottom:10px
+.modalBox{
+background:var(--panel);
+padding:20px;border-radius:16px;width:360px
 }
-.modal button{background:var(--red);color:#fff;border:none;border-radius:6px;cursor:pointer}
-.close{float:right;background:none;border:none;font-size:18px;cursor:pointer}
+.modalBox input,.modalBox textarea,.modalBox select,.modalBox button{
+width:100%;padding:10px;margin-bottom:10px;
+background:var(--panel2);color:var(--text);
+border:none;border-radius:10px
+}
+.modalBox button{
+background:linear-gradient(135deg,var(--accent),var(--accent2));
+font-weight:700;cursor:pointer
+}
+.close{
+float:right;background:none;border:none;color:#fff;
+font-size:18px;cursor:pointer
+}
 </style>
 </head>
 
@@ -98,46 +133,48 @@ width:100%;padding:8px;margin-bottom:10px
 
 <!-- LOGIN -->
 <div id="loginScreen">
-  <div class="box">
-    <h2>System SWD-ST</h2>
-    <input id="loginUser" placeholder="Login">
-    <input id="loginPass" type="password" placeholder="Hasło">
-    <button id="loginBtn">Zaloguj</button>
-    <small id="loginErr" style="color:red"></small>
-  </div>
+ <div class="loginBox">
+  <h2>SWD-ST PRO</h2>
+  <input id="loginUser" placeholder="Login">
+  <input id="loginPass" type="password" placeholder="Hasło">
+  <button onclick="login()">ZALOGUJ</button>
+  <small id="loginErr" style="color:red"></small>
+ </div>
 </div>
 
 <!-- APP -->
 <div id="mainApp" class="hidden">
 <header>
-  <strong>SWD-ST | Dyspozytornia</strong>
-  <nav>
-    <button onclick="openAddEvent()">+ Zgłoszenie</button>
-    <button onclick="openAddUnit()">+ Jednostka</button>
-  </nav>
+ <strong>🚒 SWD-ST | DYSPONENT</strong>
+ <nav>
+  <button onclick="openEvent()">+ Zdarzenie</button>
+  <button onclick="openUnit()">+ Jednostka</button>
+  <span id="stats"></span>
+ </nav>
 </header>
 
 <div id="app">
-  <div id="left"></div>
-  <div id="map"></div>
+ <div id="left">
+  <div class="panelHeader">Zdarzenia</div>
+ </div>
+ <div id="map"></div>
 </div>
 </div>
 
 <!-- MODALS -->
-<div id="addEventModal" class="modal hidden" onclick="closeModals()">
- <div class="box" onclick="event.stopPropagation()">
-  <button class="close" onclick="closeModals()">✖</button>
-  <h3>Nowe zgłoszenie</h3>
+<div id="eventModal" class="modal hidden" onclick="closeAll()">
+ <div class="modalBox" onclick="event.stopPropagation()">
+  <button class="close" onclick="closeAll()">✖</button>
+  <h3>Nowe zdarzenie</h3>
   <input id="etitle" placeholder="Tytuł">
   <textarea id="edesc" placeholder="Opis"></textarea>
-  <input id="eloc" placeholder="Lokalizacja">
   <button onclick="addEvent()">Dodaj</button>
  </div>
 </div>
 
-<div id="addUnitModal" class="modal hidden" onclick="closeModals()">
- <div class="box" onclick="event.stopPropagation()">
-  <button class="close" onclick="closeModals()">✖</button>
+<div id="unitModal" class="modal hidden" onclick="closeAll()">
+ <div class="modalBox" onclick="event.stopPropagation()">
+  <button class="close" onclick="closeAll()">✖</button>
   <h3>Nowa jednostka</h3>
   <input id="uname" placeholder="Nazwa">
   <select id="ustatus">
@@ -155,77 +192,76 @@ width:100%;padding:8px;margin-bottom:10px
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 /* LOGIN */
-document.getElementById("loginBtn").onclick = () => {
- const u = document.getElementById("loginUser").value;
- const p = document.getElementById("loginPass").value;
- if(u==="OSPLipowki" && p==="Sylwek123"){
-   document.getElementById("loginScreen").style.display="none";
-   document.getElementById("mainApp").classList.remove("hidden");
-   initMap();
- } else {
-   document.getElementById("loginErr").textContent="Błędny login lub hasło";
- }
-};
+function login(){
+ if(loginUser.value==="OSPLipowki" && loginPass.value==="Sylwek123"){
+  loginScreen.style.display="none";
+  mainApp.classList.remove("hidden");
+  init();
+ }else loginErr.textContent="Błędne dane";
+}
 
 /* MAP */
 let map;
-function initMap(){
+function init(){
  map=L.map('map').setView([51.9,21.6],10);
  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+ render();
 }
 
 /* DATA */
-let units=[{name:"OSP Garwolin",status:"WOLNY"}];
-let events=[];
+let events=JSON.parse(localStorage.getItem("events")||"[]");
+let units=JSON.parse(localStorage.getItem("units")||"[]");
 
 /* RENDER */
 function render(){
- const left=document.getElementById("left");
- left.innerHTML="";
- events.forEach(e=>{
+ left.innerHTML='<div class="panelHeader">Zdarzenia</div>';
+ events.forEach((e,i)=>{
   const d=document.createElement("div");
   d.className="event";
   d.innerHTML=`
    <h4>${e.title}</h4>
-   <small>${e.loc}</small>
-   <div class="event-details hidden">
-     <p>${e.desc}</p>
-     <p>${e.date}</p>
-     ${units.map(u=>`<span class="badge ${u.status}">${u.name}</span>`).join("")}
+   <small>${e.time}</small>
+   <div class="details hidden">
+    <p>${e.desc}</p>
+    ${units.map(u=>`<span class="badge ${u.status}">${u.name}</span>`).join("")}
+    <br><button onclick="delEvent(${i})">Usuń</button>
    </div>`;
   d.onclick=()=>{
-    d.querySelector(".event-details").classList.toggle("hidden");
-    map.flyTo(e.marker.getLatLng(),13);
+   d.querySelector(".details").classList.toggle("hidden");
+   map.flyTo(e.pos,13);
   };
   left.appendChild(d);
  });
+ stats.textContent=`🚨 ${events.length} | 🚒 ${units.length}`;
+ localStorage.setItem("events",JSON.stringify(events));
+ localStorage.setItem("units",JSON.stringify(units));
 }
 
 /* ADD */
 function addEvent(){
- const ev={
+ const pos=map.getCenter();
+ events.push({
   title:etitle.value,
   desc:edesc.value,
-  loc:eloc.value,
-  date:new Date().toLocaleString(),
-  marker:L.marker(map.getCenter()).addTo(map)
- };
- events.push(ev);
- closeModals();render();
+  time:new Date().toLocaleString(),
+  pos:[pos.lat,pos.lng]
+ });
+ L.marker(pos,{draggable:true}).addTo(map);
+ closeAll();render();
 }
 function addUnit(){
  units.push({name:uname.value,status:ustatus.value});
- closeModals();render();
+ closeAll();render();
 }
+function delEvent(i){events.splice(i,1);render()}
 
 /* MODALS */
-function openAddEvent(){addEventModal.classList.remove("hidden")}
-function openAddUnit(){addUnitModal.classList.remove("hidden")}
-function closeModals(){
- addEventModal.classList.add("hidden");
- addUnitModal.classList.add("hidden");
+function openEvent(){eventModal.classList.remove("hidden")}
+function openUnit(){unitModal.classList.remove("hidden")}
+function closeAll(){
+ eventModal.classList.add("hidden");
+ unitModal.classList.add("hidden");
 }
 </script>
-
 </body>
 </html>
