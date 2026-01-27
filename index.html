@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <title>SWD-ST PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
 
 <style>
 :root{
@@ -13,25 +15,33 @@
 }
 *{box-sizing:border-box;font-family:Inter}
 body{margin:0;background:var(--bg);color:var(--text)}
-.hidden{display:none}
 header{height:56px;background:#0f131c;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
 button{cursor:pointer}
 
 #app{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 56px)}
 #left{background:var(--panel);overflow:auto}
 .panelHeader{padding:12px;font-weight:700;border-bottom:1px solid #222}
-.event,.station{padding:12px;border-bottom:1px solid #222}
-.event:hover,.station:hover{background:#ffffff08}
-.badge{padding:4px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px;display:inline-block}
+.card{padding:12px;border-bottom:1px solid #222}
+.card:hover{background:#ffffff08}
+
+.badge{padding:4px 8px;border-radius:12px;font-size:11px;font-weight:600}
 .WOLNY{background:#2ecc71;color:#000}
 .W_DRODZE{background:#3498db}
 .NA_MIEJSCU{background:#e74c3c}
+
 #map{height:100%}
 
-.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;justify-content:center;align-items:center;z-index:999}
-.modalBox{background:var(--panel);padding:20px;border-radius:14px;width:360px}
+.modal{
+position:fixed;inset:0;background:rgba(0,0,0,.7);
+display:flex;align-items:center;justify-content:center;z-index:999
+}
+.modalBox{
+background:var(--panel);padding:20px;border-radius:14px;width:360px
+}
 .modalBox input,.modalBox select,.modalBox button{
-width:100%;padding:10px;margin-bottom:10px;background:var(--panel2);border:none;border-radius:10px;color:#fff}
+width:100%;padding:10px;margin-bottom:10px;
+background:var(--panel2);border:none;border-radius:10px;color:#fff
+}
 </style>
 </head>
 
@@ -55,22 +65,17 @@ width:100%;padding:10px;margin-bottom:10px;background:var(--panel2);border:none;
 <div id="map"></div>
 </div>
 
-<!-- GOOGLE MAPS -->
-<script src="https://maps.googleapis.com/maps/api/js?key=TWOJ_API_KEY"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 
 <script>
-let map, directionsService;
-let events=[], stations=[], vehiclesOnMap=[];
+let map;
+let events=[], stations=[];
+let movingVehicles=[];
 
-function init(){
- map=new google.maps.Map(document.getElementById("map"),{
-  center:{lat:51.9,lng:21.6},zoom:10
- });
- directionsService=new google.maps.DirectionsService();
-}
-window.onload=init;
+map=L.map("map").setView([51.9,21.6],10);
+L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
-/* MODALE */
+/* ===== MODAL ===== */
 function modal(html){
  const m=document.createElement("div");
  m.className="modal";
@@ -79,12 +84,13 @@ function modal(html){
 }
 function closeModal(){document.querySelectorAll(".modal").forEach(m=>m.remove())}
 
-/* REMIZA */
+/* ===== REMIZY ===== */
 function openStationModal(){
  modal(`
  <h3>Nowa remiza</h3>
- <input id="sName" placeholder="Nazwa">
- <button onclick="addStation()">Dodaj</button>`);
+ <input id="sName" placeholder="Nazwa remizy">
+ <button onclick="addStation()">Dodaj</button>
+ `);
 }
 function addStation(){
  stations.push({
@@ -95,47 +101,46 @@ function addStation(){
  });
  closeModal();render();
 }
-
-/* STRAŻACY I WOZY */
 function manageStation(i){
  const s=stations[i];
  modal(`
  <h3>${s.name}</h3>
  <input id="ff" placeholder="Strażak">
- <button onclick="stations[${i}].firefighters.push(ff.value);manageStation(${i})">+ Strażak</button>
+ <button onclick="s.firefighters.push(ff.value);manageStation(${i})">+ Strażak</button>
  <input id="vh" placeholder="Wóz">
- <button onclick="stations[${i}].vehicles.push({name:vh.value,status:'WOLNY'});manageStation(${i})">+ Wóz</button>
- <p>Strażacy: ${s.firefighters.join(", ")}</p>
- <p>Wozy: ${s.vehicles.map(v=>v.name).join(", ")}</p>
+ <button onclick="s.vehicles.push({name:vh.value,status:'WOLNY'});manageStation(${i})">+ Wóz</button>
+ <p>👨‍🚒 ${s.firefighters.join(", ") || "-"}</p>
+ <p>🚒 ${s.vehicles.map(v=>v.name).join(", ") || "-"}</p>
  `);
 }
 
-/* ZDARZENIA */
+/* ===== ZDARZENIA ===== */
 function openEventModal(){
  modal(`
  <h3>Nowe zdarzenie</h3>
- <input id="eTitle" placeholder="Tytuł">
- <button onclick="addEvent()">Dodaj</button>`);
+ <input id="eTitle" placeholder="Opis zdarzenia">
+ <button onclick="addEvent()">Dodaj</button>
+ `);
 }
 function addEvent(){
  const pos=map.getCenter();
  events.push({title:eTitle.value,pos});
- new google.maps.Marker({position:pos,map});
+ L.marker(pos).addTo(map);
  closeModal();render();
 }
 
-/* WYSŁANIE JEDNOSTKI */
-function dispatch(ei){
+/* ===== DYSPOZYCJA ===== */
+function dispatchEvent(ei){
  modal(`
  <h3>Wyślij jednostkę</h3>
  <select id="sSel">${stations.map((s,i)=>`<option value="${i}">${s.name}</option>`).join("")}</select>
  <select id="vSel"></select>
  <button onclick="sendUnit(${ei})">WYŚLIJ</button>
  `);
- updateVehicles();
- sSel.onchange=updateVehicles;
+ updateVehicleList();
+ sSel.onchange=updateVehicleList;
 }
-function updateVehicles(){
+function updateVehicleList(){
  const s=stations[sSel.value];
  vSel.innerHTML=s.vehicles.map((v,i)=>`<option value="${i}">${v.name}</option>`).join("");
 }
@@ -144,41 +149,45 @@ function sendUnit(ei){
  const s=stations[sSel.value];
  const v=s.vehicles[vSel.value];
  v.status="W_DRODZE";
- animateVehicle(s.pos,events[ei].pos,v.name);
+ animateVehicle(s.pos,events[ei].pos,v);
  closeModal();render();
 }
 
-/* ANIMACJA */
-function animateVehicle(start,end,label){
- directionsService.route({
-  origin:start,destination:end,travelMode:"DRIVING"
- },(res,stat)=>{
-  if(stat!=="OK")return;
-  const path=res.routes[0].overview_path;
-  const marker=new google.maps.Marker({position:path[0],map,label:"🚒"});
-  let i=0;
-  const int=setInterval(()=>{
-   i++;
-   if(i>=path.length){clearInterval(int);return}
-   marker.setPosition(path[i]);
-  },300);
- });
+/* ===== TRASA + ANIMACJA (OSRM) ===== */
+async function animateVehicle(start,end,vehicle){
+ const url=`https://router.project-osrm.org/route/v1/driving/${start.lng},${start.lat};${end.lng},${end.lat}?overview=full&geometries=geojson`;
+ const res=await fetch(url);
+ const data=await res.json();
+ const coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
+
+ const marker=L.marker(coords[0],{icon:L.divIcon({html:"🚒",iconSize:[24,24]})}).addTo(map);
+ let i=0;
+ const int=setInterval(()=>{
+  i++;
+  if(i>=coords.length){
+   clearInterval(int);
+   vehicle.status="NA_MIEJSCU";
+   render();
+   return;
+  }
+  marker.setLatLng(coords[i]);
+ },200);
 }
 
-/* RENDER */
+/* ===== RENDER ===== */
 function render(){
  eventsDiv.innerHTML="";
  events.forEach((e,i)=>{
   eventsDiv.innerHTML+=`
-  <div class="event">
+  <div class="card">
    <b>${e.title}</b><br>
-   <button onclick="dispatch(${i})">Wyślij jednostkę</button>
+   <button onclick="dispatchEvent(${i})">Wyślij jednostkę</button>
   </div>`;
  });
  stationsDiv.innerHTML="";
  stations.forEach((s,i)=>{
   stationsDiv.innerHTML+=`
-  <div class="station" onclick="manageStation(${i})">
+  <div class="card" onclick="manageStation(${i})">
    <b>${s.name}</b><br>
    👨‍🚒 ${s.firefighters.length} | 🚒 ${s.vehicles.length}
   </div>`;
