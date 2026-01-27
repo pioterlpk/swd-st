@@ -4,255 +4,184 @@
 <meta charset="UTF-8">
 <title>SWD-ST PRO</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
-
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 
 <style>
 :root{
---bg:#0c0f14;
---panel:#141925;
---panel2:#1b2233;
---accent:#ff2a2a;
---text:#e8eaf0;
---muted:#8c93a8;
+--bg:#0c0f14;--panel:#141925;--panel2:#1b2233;
+--accent:#ff2a2a;--text:#e8eaf0;--muted:#8c93a8;
 }
 *{box-sizing:border-box;font-family:Inter}
 body{margin:0;background:var(--bg);color:var(--text)}
 .hidden{display:none}
+header{height:56px;background:#0f131c;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
+button{cursor:pointer}
 
-/* LOGIN */
-#loginScreen{
-height:100vh;display:flex;justify-content:center;align-items:center;
-background:radial-gradient(circle at top,#300,#000)
-}
-.loginBox{
-background:var(--panel);
-padding:30px;border-radius:16px;width:320px;
-box-shadow:0 0 60px #ff2a2a44
-}
-.loginBox h2{text-align:center;margin-bottom:20px}
-.loginBox input,.loginBox button{
-width:100%;padding:12px;margin-bottom:12px;
-background:var(--panel2);border:none;border-radius:10px;color:var(--text)
-}
-.loginBox button{
-background:linear-gradient(135deg,#ff2a2a,#ff6a00);
-font-weight:700;cursor:pointer
-}
-
-/* APP */
-header{
-height:56px;background:#0f131c;
-display:flex;align-items:center;justify-content:space-between;
-padding:0 20px;border-bottom:1px solid #222
-}
-header nav button{
-background:none;border:none;color:var(--text);
-margin-left:14px;cursor:pointer;font-weight:600
-}
-header nav button:hover{color:var(--accent)}
-
-#app{
-display:grid;
-grid-template-columns:380px 1fr;
-height:calc(100vh - 56px)
-}
-
-/* LEFT */
-#left{
-background:var(--panel);
-border-right:1px solid #222;
-overflow:auto
-}
-.panelHeader{
-padding:14px;font-weight:700;border-bottom:1px solid #222
-}
-.event{
-padding:14px;border-bottom:1px solid #222;cursor:pointer
-}
-.event:hover{background:#ffffff08}
-.event h4{margin:0;font-size:14px}
-.event small{color:var(--muted)}
-.details{margin-top:10px;font-size:13px}
-
-/* BADGES */
-.badge{
-padding:4px 8px;border-radius:20px;font-size:11px;
-display:inline-block;margin:2px;font-weight:600
-}
+#app{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 56px)}
+#left{background:var(--panel);overflow:auto}
+.panelHeader{padding:12px;font-weight:700;border-bottom:1px solid #222}
+.event,.station{padding:12px;border-bottom:1px solid #222}
+.event:hover,.station:hover{background:#ffffff08}
+.badge{padding:4px 8px;border-radius:12px;font-size:11px;font-weight:600;margin:2px;display:inline-block}
 .WOLNY{background:#2ecc71;color:#000}
-.DYSPOZYCJA{background:#f1c40f;color:#000}
 .W_DRODZE{background:#3498db}
 .NA_MIEJSCU{background:#e74c3c}
-.POWROT{background:#9b59b6}
-.GOSPODARCZY{background:#7f8c8d}
-
-/* MAP */
 #map{height:100%}
 
-/* MODAL */
-.modal{
-position:fixed;inset:0;
-background:rgba(0,0,0,.75);
-display:flex;align-items:center;justify-content:center;
-z-index:9999
-}
-.modalBox{
-background:var(--panel);
-padding:20px;border-radius:16px;width:360px
-}
-.modalBox input,.modalBox textarea,.modalBox select,.modalBox button{
-width:100%;padding:10px;margin-bottom:10px;
-background:var(--panel2);border:none;border-radius:10px;color:var(--text)
-}
-.modalBox button{
-background:linear-gradient(135deg,#ff2a2a,#ff6a00);
-font-weight:700;cursor:pointer
-}
-.close{
-float:right;background:none;border:none;color:#fff;font-size:18px;cursor:pointer
-}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.75);display:flex;justify-content:center;align-items:center;z-index:999}
+.modalBox{background:var(--panel);padding:20px;border-radius:14px;width:360px}
+.modalBox input,.modalBox select,.modalBox button{
+width:100%;padding:10px;margin-bottom:10px;background:var(--panel2);border:none;border-radius:10px;color:#fff}
 </style>
 </head>
 
 <body>
 
-<!-- LOGIN -->
-<div id="loginScreen">
- <div class="loginBox">
-  <h2>SWD-ST PRO</h2>
-  <input id="loginUser" placeholder="Login">
-  <input id="loginPass" type="password" placeholder="Hasło">
-  <button id="loginBtn">ZALOGUJ</button>
-  <small id="loginErr" style="color:red"></small>
- </div>
-</div>
-
-<!-- APP -->
-<div id="mainApp" class="hidden">
 <header>
- <strong>🚒 SWD-ST | DYSPONENT</strong>
- <nav>
-  <button id="btnAddEvent">+ Zdarzenie</button>
-  <button id="btnAddUnit">+ Jednostka</button>
- </nav>
+<strong>🚒 SWD-ST PRO</strong>
+<nav>
+<button onclick="openStationModal()">+ Remiza</button>
+<button onclick="openEventModal()">+ Zdarzenie</button>
+</nav>
 </header>
 
 <div id="app">
- <div id="left">
-  <div class="panelHeader">Zdarzenia</div>
- </div>
- <div id="map"></div>
+<div id="left">
+<div class="panelHeader">Zdarzenia</div>
+<div id="events"></div>
+<div class="panelHeader">Remizy</div>
+<div id="stations"></div>
 </div>
+<div id="map"></div>
 </div>
 
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<!-- GOOGLE MAPS -->
+<script src="https://maps.googleapis.com/maps/api/js?key=TWOJ_API_KEY"></script>
+
 <script>
-/* LOGIN */
-document.getElementById("loginBtn").onclick = () => {
- const u = document.getElementById("loginUser").value;
- const p = document.getElementById("loginPass").value;
- if(u==="OSPLipowki" && p==="Sylwek123"){
-  document.getElementById("loginScreen").style.display="none";
-  document.getElementById("mainApp").classList.remove("hidden");
-  initApp();
- }else{
-  document.getElementById("loginErr").textContent="Błędny login lub hasło";
- }
-};
+let map, directionsService;
+let events=[], stations=[], vehiclesOnMap=[];
 
-let map, events=[], units=[];
-
-/* INIT */
-function initApp(){
- initMap();
- render();
- bindButtons();
+function init(){
+ map=new google.maps.Map(document.getElementById("map"),{
+  center:{lat:51.9,lng:21.6},zoom:10
+ });
+ directionsService=new google.maps.DirectionsService();
 }
+window.onload=init;
 
-/* MAP */
-function initMap(){
- map=L.map("map").setView([51.9,21.6],10);
- L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
-}
-
-/* BUTTONS */
-function bindButtons(){
- document.getElementById("btnAddEvent").onclick = openEventModal;
- document.getElementById("btnAddUnit").onclick = openUnitModal;
-}
-
-/* MODALS (TWORZONE DYNAMICZNIE) */
-function openEventModal(){
- createModal(`
-  <h3>Nowe zdarzenie</h3>
-  <input id="eTitle" placeholder="Tytuł">
-  <textarea id="eDesc" placeholder="Opis"></textarea>
-  <button onclick="addEvent()">Dodaj</button>
- `);
-}
-
-function openUnitModal(){
- createModal(`
-  <h3>Nowa jednostka</h3>
-  <input id="uName" placeholder="Nazwa">
-  <select id="uStatus">
-   <option>WOLNY</option><option>DYSPOZYCJA</option>
-   <option>W_DRODZE</option><option>NA_MIEJSCU</option>
-   <option>POWROT</option><option>GOSPODARCZY</option>
-  </select>
-  <button onclick="addUnit()">Dodaj</button>
- `);
-}
-
-function createModal(html){
- closeModal();
+/* MODALE */
+function modal(html){
  const m=document.createElement("div");
  m.className="modal";
- m.innerHTML=`<div class="modalBox">
-  <button class="close" onclick="closeModal()">✖</button>${html}
- </div>`;
+ m.innerHTML=`<div class="modalBox">${html}<button onclick="closeModal()">Zamknij</button></div>`;
  document.body.appendChild(m);
 }
+function closeModal(){document.querySelectorAll(".modal").forEach(m=>m.remove())}
 
-function closeModal(){
- document.querySelectorAll(".modal").forEach(m=>m.remove());
+/* REMIZA */
+function openStationModal(){
+ modal(`
+ <h3>Nowa remiza</h3>
+ <input id="sName" placeholder="Nazwa">
+ <button onclick="addStation()">Dodaj</button>`);
+}
+function addStation(){
+ stations.push({
+  name:sName.value,
+  pos:map.getCenter(),
+  firefighters:[],
+  vehicles:[]
+ });
+ closeModal();render();
 }
 
-/* LOGIC */
+/* STRAŻACY I WOZY */
+function manageStation(i){
+ const s=stations[i];
+ modal(`
+ <h3>${s.name}</h3>
+ <input id="ff" placeholder="Strażak">
+ <button onclick="stations[${i}].firefighters.push(ff.value);manageStation(${i})">+ Strażak</button>
+ <input id="vh" placeholder="Wóz">
+ <button onclick="stations[${i}].vehicles.push({name:vh.value,status:'WOLNY'});manageStation(${i})">+ Wóz</button>
+ <p>Strażacy: ${s.firefighters.join(", ")}</p>
+ <p>Wozy: ${s.vehicles.map(v=>v.name).join(", ")}</p>
+ `);
+}
+
+/* ZDARZENIA */
+function openEventModal(){
+ modal(`
+ <h3>Nowe zdarzenie</h3>
+ <input id="eTitle" placeholder="Tytuł">
+ <button onclick="addEvent()">Dodaj</button>`);
+}
 function addEvent(){
  const pos=map.getCenter();
- events.push({
-  title:eTitle.value,
-  desc:eDesc.value,
-  time:new Date().toLocaleString(),
-  pos:[pos.lat,pos.lng]
+ events.push({title:eTitle.value,pos});
+ new google.maps.Marker({position:pos,map});
+ closeModal();render();
+}
+
+/* WYSŁANIE JEDNOSTKI */
+function dispatch(ei){
+ modal(`
+ <h3>Wyślij jednostkę</h3>
+ <select id="sSel">${stations.map((s,i)=>`<option value="${i}">${s.name}</option>`).join("")}</select>
+ <select id="vSel"></select>
+ <button onclick="sendUnit(${ei})">WYŚLIJ</button>
+ `);
+ updateVehicles();
+ sSel.onchange=updateVehicles;
+}
+function updateVehicles(){
+ const s=stations[sSel.value];
+ vSel.innerHTML=s.vehicles.map((v,i)=>`<option value="${i}">${v.name}</option>`).join("");
+}
+
+function sendUnit(ei){
+ const s=stations[sSel.value];
+ const v=s.vehicles[vSel.value];
+ v.status="W_DRODZE";
+ animateVehicle(s.pos,events[ei].pos,v.name);
+ closeModal();render();
+}
+
+/* ANIMACJA */
+function animateVehicle(start,end,label){
+ directionsService.route({
+  origin:start,destination:end,travelMode:"DRIVING"
+ },(res,stat)=>{
+  if(stat!=="OK")return;
+  const path=res.routes[0].overview_path;
+  const marker=new google.maps.Marker({position:path[0],map,label:"🚒"});
+  let i=0;
+  const int=setInterval(()=>{
+   i++;
+   if(i>=path.length){clearInterval(int);return}
+   marker.setPosition(path[i]);
+  },300);
  });
- L.marker(pos).addTo(map);
- closeModal();render();
 }
 
-function addUnit(){
- units.push({name:uName.value,status:uStatus.value});
- closeModal();render();
-}
-
+/* RENDER */
 function render(){
- const left=document.getElementById("left");
- left.innerHTML='<div class="panelHeader">Zdarzenia</div>';
- events.forEach(e=>{
-  const d=document.createElement("div");
-  d.className="event";
-  d.innerHTML=`
-   <h4>${e.title}</h4>
-   <small>${e.time}</small>
-   <div class="details hidden">
-    <p>${e.desc}</p>
-    ${units.map(u=>`<span class="badge ${u.status}">${u.name}</span>`).join("")}
-   </div>`;
-  d.onclick=()=>d.querySelector(".details").classList.toggle("hidden");
-  left.appendChild(d);
+ eventsDiv.innerHTML="";
+ events.forEach((e,i)=>{
+  eventsDiv.innerHTML+=`
+  <div class="event">
+   <b>${e.title}</b><br>
+   <button onclick="dispatch(${i})">Wyślij jednostkę</button>
+  </div>`;
+ });
+ stationsDiv.innerHTML="";
+ stations.forEach((s,i)=>{
+  stationsDiv.innerHTML+=`
+  <div class="station" onclick="manageStation(${i})">
+   <b>${s.name}</b><br>
+   👨‍🚒 ${s.firefighters.length} | 🚒 ${s.vehicles.length}
+  </div>`;
  });
 }
 </script>
