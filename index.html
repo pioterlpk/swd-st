@@ -16,7 +16,9 @@
 *{box-sizing:border-box;font-family:Inter}
 body{margin:0;background:var(--bg);color:var(--text)}
 header{height:56px;background:#0f131c;display:flex;align-items:center;justify-content:space-between;padding:0 20px}
-button{cursor:pointer}
+
+button{cursor:pointer;background:var(--panel2);border:none;color:#fff;border-radius:8px;padding:6px 10px}
+button:hover{background:#2a3248}
 
 #app{display:grid;grid-template-columns:360px 1fr;height:calc(100vh - 56px)}
 #left{background:var(--panel);overflow:auto}
@@ -70,21 +72,23 @@ background:var(--panel2);border:none;border-radius:10px;color:#fff
 <script>
 let map;
 let events=[], stations=[];
-let movingVehicles=[];
 
 map=L.map("map").setView([51.9,21.6],10);
 L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png").addTo(map);
 
 /* ===== MODAL ===== */
 function modal(html){
+ closeModal();
  const m=document.createElement("div");
  m.className="modal";
  m.innerHTML=`<div class="modalBox">${html}<button onclick="closeModal()">Zamknij</button></div>`;
  document.body.appendChild(m);
 }
-function closeModal(){document.querySelectorAll(".modal").forEach(m=>m.remove())}
+function closeModal(){
+ document.querySelectorAll(".modal").forEach(m=>m.remove());
+}
 
-/* ===== REMIZY ===== */
+/* ===== REMIZA ===== */
 function openStationModal(){
  modal(`
  <h3>Nowa remiza</h3>
@@ -92,26 +96,53 @@ function openStationModal(){
  <button onclick="addStation()">Dodaj</button>
  `);
 }
+
 function addStation(){
+ const pos=map.getCenter();
  stations.push({
   name:sName.value,
-  pos:map.getCenter(),
+  pos,
   firefighters:[],
   vehicles:[]
  });
- closeModal();render();
+
+ L.marker(pos,{
+  icon:L.divIcon({html:"🏠🚒",iconSize:[30,30]})
+ }).addTo(map);
+
+ closeModal();
+ render();
 }
+
+/* ===== ZARZĄDZANIE REMIZĄ ===== */
 function manageStation(i){
  const s=stations[i];
  modal(`
  <h3>${s.name}</h3>
- <input id="ff" placeholder="Strażak">
- <button onclick="s.firefighters.push(ff.value);manageStation(${i})">+ Strażak</button>
- <input id="vh" placeholder="Wóz">
- <button onclick="s.vehicles.push({name:vh.value,status:'WOLNY'});manageStation(${i})">+ Wóz</button>
+
+ <input id="ffName" placeholder="Strażak">
+ <button onclick="addFirefighter(${i})">+ Strażak</button>
+
+ <input id="vhName" placeholder="Wóz">
+ <button onclick="addVehicle(${i})">+ Wóz</button>
+
  <p>👨‍🚒 ${s.firefighters.join(", ") || "-"}</p>
- <p>🚒 ${s.vehicles.map(v=>v.name).join(", ") || "-"}</p>
+ <p>🚒 ${s.vehicles.map(v=>v.name+" <span class='badge "+v.status+"'>"+v.status+"</span>").join("<br>") || "-"}</p>
  `);
+}
+
+function addFirefighter(i){
+ const val=document.getElementById("ffName").value;
+ if(!val)return;
+ stations[i].firefighters.push(val);
+ manageStation(i);
+}
+
+function addVehicle(i){
+ const val=document.getElementById("vhName").value;
+ if(!val)return;
+ stations[i].vehicles.push({name:val,status:"WOLNY"});
+ manageStation(i);
 }
 
 /* ===== ZDARZENIA ===== */
@@ -122,11 +153,13 @@ function openEventModal(){
  <button onclick="addEvent()">Dodaj</button>
  `);
 }
+
 function addEvent(){
  const pos=map.getCenter();
  events.push({title:eTitle.value,pos});
  L.marker(pos).addTo(map);
- closeModal();render();
+ closeModal();
+ render();
 }
 
 /* ===== DYSPOZYCJA ===== */
@@ -140,6 +173,7 @@ function dispatchEvent(ei){
  updateVehicleList();
  sSel.onchange=updateVehicleList;
 }
+
 function updateVehicleList(){
  const s=stations[sSel.value];
  vSel.innerHTML=s.vehicles.map((v,i)=>`<option value="${i}">${v.name}</option>`).join("");
@@ -150,7 +184,8 @@ function sendUnit(ei){
  const v=s.vehicles[vSel.value];
  v.status="W_DRODZE";
  animateVehicle(s.pos,events[ei].pos,v);
- closeModal();render();
+ closeModal();
+ render();
 }
 
 /* ===== TRASA + ANIMACJA (OSRM) ===== */
@@ -160,7 +195,10 @@ async function animateVehicle(start,end,vehicle){
  const data=await res.json();
  const coords=data.routes[0].geometry.coordinates.map(c=>[c[1],c[0]]);
 
- const marker=L.marker(coords[0],{icon:L.divIcon({html:"🚒",iconSize:[24,24]})}).addTo(map);
+ const marker=L.marker(coords[0],{
+  icon:L.divIcon({html:"🚒",iconSize:[24,24]})
+ }).addTo(map);
+
  let i=0;
  const int=setInterval(()=>{
   i++;
@@ -184,6 +222,7 @@ function render(){
    <button onclick="dispatchEvent(${i})">Wyślij jednostkę</button>
   </div>`;
  });
+
  stationsDiv.innerHTML="";
  stations.forEach((s,i)=>{
   stationsDiv.innerHTML+=`
